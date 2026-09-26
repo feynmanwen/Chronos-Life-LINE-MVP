@@ -108,7 +108,12 @@ export const HealthProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     return saved ? JSON.parse(saved) : ALL_INITIAL_TASKS;
   });
 
-  const [viewMode, setViewMode] = useState<ViewMode>('mobile');
+  const [viewMode, setViewMode] = useState<ViewMode>(() => {
+    if (typeof window !== 'undefined' && window.innerWidth >= 768) {
+      return 'desktop'; // 平板與寬螢幕預設為雙欄工作台介面
+    }
+    return 'mobile'; // 手機預設為行動介面
+  });
   const [activeTab, setActiveTab] = useState<AppTab>('dashboard');
 
   // Modals

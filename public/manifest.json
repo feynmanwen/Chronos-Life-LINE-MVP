@@ -1,0 +1,19 @@
+{
+  "name": "AI 健檢趨勢管家 (Chronos Life)",
+  "short_name": "Chronos Life",
+  "description": "個人健康資產管理與行為改變閉環系統 - 支援 Android 手機與平板",
+  "start_url": "/",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#020617",
+  "theme_color": "#020617",
+  "categories": ["medical", "health", "lifestyle"],
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "192x192 512x512",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

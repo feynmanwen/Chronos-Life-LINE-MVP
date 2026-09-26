@@ -2,6 +2,7 @@ import React from 'react';
 import { useHealth, ViewMode } from '../../context/HealthContext';
 import { 
   Smartphone, 
+  Tablet,
   Monitor, 
   Users, 
   Upload, 
@@ -41,10 +42,10 @@ export const DesktopHeader: React.FC = () => {
                 AI 健檢趨勢管家 <span className="text-cyan-400 font-normal text-xs sm:text-sm">(Chronos Life)</span>
               </h1>
               <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 font-mono">
-                LINE MVP v13.0
+                Android / 平板 / LINE MVP v13.0
               </span>
             </div>
-            <p className="text-[11px] text-slate-400">個人健康資產管理與行為改變閉環系統</p>
+            <p className="text-[11px] text-slate-400">個人健康資產管理與行為改變閉環系統 · 支援 Android 手機與平板</p>
           </div>
         </div>
 
@@ -107,29 +108,31 @@ export const DesktopHeader: React.FC = () => {
             <Watch className="w-4 h-4" />
           </button>
 
-          {/* 視窗模式切換 (Mobile LINE 框 vs 桌面寬螢幕) */}
+          {/* 視窗模式切換 (手機行動模式 vs 平板/電腦寬螢幕) */}
           <div className="ml-1 pl-2 border-l border-slate-800 flex items-center gap-1 bg-slate-900 p-1 rounded-xl border">
             <button
               onClick={() => setViewMode('mobile')}
-              className={`p-1.5 rounded-lg transition ${
+              className={`p-1.5 rounded-lg transition flex items-center gap-1 text-xs ${
                 viewMode === 'mobile'
-                  ? 'bg-slate-800 text-cyan-400 shadow-sm'
+                  ? 'bg-slate-800 text-cyan-400 shadow-sm font-semibold'
                   : 'text-slate-500 hover:text-slate-300'
               }`}
-              title="LINE 手機擬真視窗模式"
+              title="手機行動版模式"
             >
               <Smartphone className="w-4 h-4" />
+              <span className="hidden xl:inline text-[11px]">手機</span>
             </button>
             <button
               onClick={() => setViewMode('desktop')}
-              className={`p-1.5 rounded-lg transition ${
+              className={`p-1.5 rounded-lg transition flex items-center gap-1 text-xs ${
                 viewMode === 'desktop'
-                  ? 'bg-slate-800 text-cyan-400 shadow-sm'
+                  ? 'bg-slate-800 text-cyan-400 shadow-sm font-semibold'
                   : 'text-slate-500 hover:text-slate-300'
               }`}
-              title="桌面寬螢幕工作台模式"
+              title="平板 / 寬螢幕工作台模式"
             >
-              <Monitor className="w-4 h-4" />
+              <Tablet className="w-4 h-4" />
+              <span className="hidden xl:inline text-[11px]">平板/桌面</span>
             </button>
           </div>
         </div>

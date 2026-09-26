@@ -1,5 +1,6 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { HealthProvider, useHealth } from './context/HealthContext';
+import { initAndroidNativeFeatures } from './utils/androidInit';
 import { DesktopHeader } from './components/layout/DesktopHeader';
 import { LineLiffContainer } from './components/layout/LineLiffContainer';
 import { GoldenCaseSelector } from './components/ingestion/GoldenCaseSelector';
@@ -25,7 +26,82 @@ import { DoctorSummaryModal } from './components/trends/DoctorSummaryModal';
 import { WearableSyncModal } from './components/settings/WearableSyncModal';
 
 const MainContent: React.FC = () => {
-  const { activeTab } = useHealth();
+  const { 
+    activeTab, 
+    setActiveTab,
+    redFlagModal,
+    closeRedFlagModal,
+    selectedRecordForTrace,
+    setSelectedRecordForTrace,
+    isDoctorSummaryOpen,
+    setIsDoctorSummaryOpen,
+    isAuditWorkbenchOpen,
+    setIsAuditWorkbenchOpen,
+    isIngestionModalOpen,
+    setIsIngestionModalOpen,
+    isWearableModalOpen,
+    setIsWearableModalOpen,
+    isPrivacyModalOpen,
+    setIsPrivacyModalOpen
+  } = useHealth();
+
+  // Android 原生硬體返回鍵與狀態列適配
+  useEffect(() => {
+    initAndroidNativeFeatures({
+      onBackButton: () => {
+        if (redFlagModal.isOpen) {
+          closeRedFlagModal();
+          return true;
+        }
+        if (selectedRecordForTrace) {
+          setSelectedRecordForTrace(null);
+          return true;
+        }
+        if (isDoctorSummaryOpen) {
+          setIsDoctorSummaryOpen(false);
+          return true;
+        }
+        if (isAuditWorkbenchOpen) {
+          setIsAuditWorkbenchOpen(false);
+          return true;
+        }
+        if (isIngestionModalOpen) {
+          setIsIngestionModalOpen(false);
+          return true;
+        }
+        if (isWearableModalOpen) {
+          setIsWearableModalOpen(false);
+          return true;
+        }
+        if (isPrivacyModalOpen) {
+          setIsPrivacyModalOpen(false);
+          return true;
+        }
+        if (activeTab !== 'dashboard') {
+          setActiveTab('dashboard');
+          return true;
+        }
+        return false;
+      }
+    });
+  }, [
+    activeTab,
+    setActiveTab,
+    redFlagModal.isOpen,
+    closeRedFlagModal,
+    selectedRecordForTrace,
+    setSelectedRecordForTrace,
+    isDoctorSummaryOpen,
+    setIsDoctorSummaryOpen,
+    isAuditWorkbenchOpen,
+    setIsAuditWorkbenchOpen,
+    isIngestionModalOpen,
+    setIsIngestionModalOpen,
+    isWearableModalOpen,
+    setIsWearableModalOpen,
+    isPrivacyModalOpen,
+    setIsPrivacyModalOpen
+  ]);
 
   return (
     <>

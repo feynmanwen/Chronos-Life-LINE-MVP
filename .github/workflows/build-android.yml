@@ -1,0 +1,83 @@
+name: Build Android APK (Phone & Tablet)
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build-apk:
+    name: Build Android Debug APK
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'zulu'
+          cache: 'gradle'
+
+      - name: Set up Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install Dependencies
+        run: npm ci
+
+      - name: Build Web App
+        run: npm run build
+
+      - name: Sync Capacitor Android
+        run: npx cap sync android
+
+      - name: Make Gradlew Executable
+        run: chmod +x android/gradlew
+
+      - name: Build Android Debug APK
+        run: |
+          cd android
+          ./gradlew assembleDebug --no-daemon --stacktrace
+
+      - name: Upload Debug APK Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ChronosLife-Android-Debug-APK
+          path: android/app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Create or Update GitHub Release with APK
+        uses: softprops/action-gh-release@v2
+        if: github.ref == 'refs/heads/main'
+        with:
+          tag_name: v13.0-android
+          name: "Chronos Life v13.0 - Android Phone & Tablet APK"
+          body: |
+            ### 📱 Chronos Life (AI 健檢趨勢管家) Android 專屬安裝包 (APK)
+            
+            本版本專為 **Android 手機** 與 **Android 平板** 打造，支援：
+            - 🟢 **生命與健康同心三環 (Chronos Rings)**：外環期望餘生、中環心肺藍、內環膳食橘。
+            - 🫀 **3D 動態器官健康地圖** (Three.js 60fps 硬體加速)。
+            - ⏳ **秒級剩餘期望年限倒數時鐘**。
+            - 📱 **手機自適應沉浸全螢幕** (移除外框，支援 Android 返回鍵)。
+            - 💻 **平板寬螢幕自適應** (橫向/雙欄大螢幕優勢)。
+            - 🚨 **6大紅字急症急診攔截** 與 一頁式醫病溝通摘要。
+
+            #### 📲 安裝方式：
+            1. 在 Android 手機或平板瀏覽器中點擊下方 `app-debug.apk` 下載。
+            2. 開啟下載檔案並允許「安裝未知來源應用程式」。
+            3. 點選「安裝」即可在桌面開始使用 Chronos Life！
+          files: |
+            android/app/build/outputs/apk/debug/app-debug.apk
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
