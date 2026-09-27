@@ -60,12 +60,15 @@ jobs:
         uses: softprops/action-gh-release@v2
         if: github.ref == 'refs/heads/main'
         with:
-          tag_name: v13.0-android
-          name: "Chronos Life v13.0 - Android Phone & Tablet APK"
+          tag_name: v14.0-android
+          name: "Chronos Life v14.0 - Android Phone & Tablet APK (含新增使用者與忘記密碼)"
           body: |
-            ### 📱 Chronos Life (AI 健檢趨勢管家) Android 專屬安裝包 (APK)
+            ### 📱 Chronos Life (AI 健檢趨勢管家) Android 專屬安裝包 (APK) v14.0
             
             本版本專為 **Android 手機** 與 **Android 平板** 打造，支援：
+            - 👥 **新增使用者 (自主註冊)**：支援家庭身分、年齡、性別，自動連動建立 SQLite 長壽健康檔案。
+            - 🔑 **忘記密碼與安全重設**：帳號驗證與密碼快速更新機制。
+            - 🗄️ **後台 SQLite (MY SQL LITE) 驅動**：零外部依賴、輕量安全個人醫療健康資料庫。
             - 🟢 **生命與健康同心三環 (Chronos Rings)**：外環期望餘生、中環心肺藍、內環膳食橘。
             - 🫀 **3D 動態器官健康地圖** (Three.js 60fps 硬體加速)。
             - ⏳ **秒級剩餘期望年限倒數時鐘**。
