@@ -1,14 +1,23 @@
-# AI 健檢趨勢管家 (Chronos Life) LINE MVP v13.0
+# AI 健檢趨勢管家 (Chronos Life) LINE MVP v14.0
 
 > **將碎片化的「數據孤島」重塑為具備增值潛力的「個人健康資產 (Health Assets)」**  
-> 基於超高齡社會預防醫學架構，結合 LINE 平台即時性、LLM + RAG 醫學轉譯、3D 人體器官透視、Apple 極簡同心三環與嚴格醫療資訊學規則之完整行為改變閉環系統。
+> 基於超高齡社會預防醫學架構，結合 LINE 平台即時性、LLM + RAG 醫學轉譯、3D 人體器官透視、Apple 極簡同心三環、SQLite 原生輕量資料庫與嚴格醫療資訊學規則之完整行為改變閉環系統。
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![React 19](https://img.shields.io/badge/React-19-61dafb.svg)](https://react.dev/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.x-3178c6.svg)](https://www.typescriptlang.org/)
-[![Vite](https://img.shields.io/badge/Vite-8.x-646cff.svg)](https://vitejs.dev/)
-[![Three.js](https://img.shields.io/badge/Three.js-WebGL-black.svg)](https://threejs.org/)
-[![Tailwind CSS](https://img.shields.io/badge/Tailwind-v4-38bdf8.svg)](https://tailwindcss.com/)
+[![Capacitor 8](https://img.shields.io/badge/Capacitor-8.x-119eff.svg)](https://capacitorjs.com/)
+[![SQLite](https://img.shields.io/badge/SQLite-Node24_Native-003B57.svg)](https://nodejs.org/)
+[![Android APK](https://img.shields.io/badge/Android_APK-v14.0-3DDC84.svg)](https://github.com/feynmanwen/Chronos-Life-LINE-MVP/releases/tag/v14.0-android)
+
+---
+
+## 📲 Android 專屬安裝包 (APK) 直接下載
+
+- 🚀 **[點此直接下載 Chronos Life v14.0 APK (7.7 MB)](https://github.com/feynmanwen/Chronos-Life-LINE-MVP/releases/download/v14.0-android/app-debug.apk)**
+- 📦 **[GitHub Releases 官方發布頁面](https://github.com/feynmanwen/Chronos-Life-LINE-MVP/releases/tag/v14.0-android)**
+- 📱 支援 Android 手機（直式沉浸式介面）與 Android 平板（橫向雙欄工作台）。
+- 🎨 完整內嵌官方專屬圖示 `CH.jpg`（生命樹健康檢查徽章）。
 
 ---
 
