@@ -6,6 +6,8 @@ import {
   loginWithCredentials, 
   loginWithLine, 
   logoutUser,
+  registerUser,
+  resetPassword as apiResetPassword,
   setSession
 } from '../services/api';
 
@@ -17,6 +19,15 @@ interface AuthContextType {
   loginLine: (displayName?: string) => Promise<void>;
   logout: () => Promise<void>;
   switchPresetUser: (username: string) => Promise<void>;
+  register: (params: {
+    username: string;
+    password: string;
+    name: string;
+    role?: string;
+    age?: number;
+    gender?: 'M' | 'F';
+  }) => Promise<void>;
+  resetPassword: (username: string, newPassword: string) => Promise<{ success: boolean; message: string }>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -64,6 +75,27 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  const register = async (params: {
+    username: string;
+    password: string;
+    name: string;
+    role?: string;
+    age?: number;
+    gender?: 'M' | 'F';
+  }) => {
+    setIsLoading(true);
+    try {
+      const res = await registerUser(params);
+      setUser(res.user);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const resetPassword = async (username: string, newPassword: string) => {
+    return await apiResetPassword(username, newPassword);
+  };
+
   // 快捷切換預設身分 (陳偉、陳國華、醫師)
   const switchPresetUser = async (username: string) => {
     const password = username === 'admin' ? 'admin123' : '123456';
@@ -80,6 +112,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         loginLine,
         logout,
         switchPresetUser,
+        register,
+        resetPassword,
       }}
     >
       {children}

@@ -130,3 +130,42 @@ export async function logoutUser(): Promise<void> {
     clearSession();
   }
 }
+
+// 註冊新使用者 (新增使用者)
+export async function registerUser(params: {
+  username: string;
+  password: string;
+  name: string;
+  role?: string;
+  age?: number;
+  gender?: 'M' | 'F';
+}): Promise<LoginResponse> {
+  try {
+    const data = await apiRequest<LoginResponse>('/api/auth/register', {
+      method: 'POST',
+      body: JSON.stringify(params),
+    });
+    setSession(data.token, data.user);
+    return data;
+  } catch (err: any) {
+    // 離線模式備援註冊
+    const offlineUser: AuthUser = {
+      id: 'usr-offline-' + Date.now(),
+      username: params.username,
+      name: params.name,
+      role: params.role || '本人',
+      avatar_url: '/icon-192.png',
+    };
+    const offlineToken = 'sess_reg_offline_' + Date.now();
+    setSession(offlineToken, offlineUser);
+    return { token: offlineToken, user: offlineUser, message: '離線註冊成功 (本地模式)' };
+  }
+}
+
+// 忘記密碼與密碼重設
+export async function resetPassword(username: string, newPassword: string): Promise<{ success: boolean; message: string }> {
+  return await apiRequest<{ success: boolean; message: string }>('/api/auth/reset-password', {
+    method: 'POST',
+    body: JSON.stringify({ username, newPassword }),
+  });
+}

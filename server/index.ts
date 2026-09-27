@@ -89,6 +89,98 @@ app.post('/api/auth/line-login', (req, res) => {
   });
 });
 
+// 3.1 身分驗證：註冊新使用者 (新增使用者)
+app.post('/api/auth/register', (req, res) => {
+  const { username, password, name, role = '本人', age = 35, gender = 'M' } = req.body;
+  if (!username || !password || !name) {
+    return res.status(400).json({ error: '請完整填寫帳號、密碼與真實姓名' });
+  }
+
+  if (password.length < 4) {
+    return res.status(400).json({ error: '密碼長度至少需要 4 碼' });
+  }
+
+  // 檢查帳號是否已存在
+  const existing = db.prepare('SELECT id FROM users WHERE username = ?').get(username);
+  if (existing) {
+    return res.status(400).json({ error: '此帳號已被註冊，請選擇其他帳號' });
+  }
+
+  const userId = 'usr-' + Date.now();
+  const memberId = 'member-' + Date.now();
+  const createdAt = new Date().toISOString();
+
+  try {
+    // 1. 寫入 users 資料表
+    db.prepare(`
+      INSERT INTO users (id, username, password, name, role, avatar_url, created_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?)
+    `).run(userId, username, password, name, role, '/icon-192.png', createdAt);
+
+    // 2. 自動在 members 資料表建立個人健康資產檔案
+    const baseLife = gender === 'F' ? 48.0 : 42.0;
+    db.prepare(`
+      INSERT INTO members (
+        id, user_id, name, role, age, gender, base_life_expectancy, dynamic_bonus,
+        next_clinic_date, next_clinic_department, next_clinic_doctor, companion_notes,
+        sleep_hours_daily, daily_steps, spo2, resting_heart_rate, health_score
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `).run(
+      memberId, userId, name, role, Number(age) || 35, gender, baseLife, 1.5,
+      new Date(Date.now() + 30 * 86400000).toISOString().split('T')[0],
+      '家醫科 / 預防醫學', '陳建國 主治醫師', '新註冊會員，建議預約初診建立基線健檢資料。',
+      7.0, 6000, 98, 72, 75
+    );
+
+    // 3. 建立登入 Session
+    const token = 'sess_' + crypto.randomUUID();
+    const expiresAt = new Date(Date.now() + 7 * 24 * 3600 * 1000).toISOString();
+    db.prepare('INSERT INTO sessions (token, user_id, created_at, expires_at) VALUES (?, ?, ?, ?)').run(
+      token, userId, createdAt, expiresAt
+    );
+
+    res.json({
+      token,
+      user: { id: userId, username, name, role, avatar_url: '/icon-192.png' },
+      message: `註冊成功！歡迎加入 Chronos Life，${name}！`
+    });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// 3.2 身分驗證：忘記密碼與密碼重設
+app.post('/api/auth/reset-password', (req, res) => {
+  const { username, newPassword } = req.body;
+  if (!username || !newPassword) {
+    return res.status(400).json({ error: '請提供帳號與新密碼' });
+  }
+
+  if (newPassword.length < 4) {
+    return res.status(400).json({ error: '新密碼長度至少需要 4 碼' });
+  }
+
+  const user = db.prepare('SELECT * FROM users WHERE username = ?').get(username) as any;
+  if (!user) {
+    return res.status(404).json({ error: `查無帳號 [${username}]，請確認輸入是否正確` });
+  }
+
+  try {
+    // 更新密碼
+    db.prepare('UPDATE users SET password = ? WHERE username = ?').run(newPassword, username);
+
+    // 清除該用戶舊的 sessions
+    db.prepare('DELETE FROM sessions WHERE user_id = ?').run(user.id);
+
+    res.json({
+      success: true,
+      message: `帳號 [${username}] 密碼已成功更新，請使用新密碼登入！`
+    });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // 4. 身分驗證：取得目前登入狀態
 app.get('/api/auth/me', (req, res) => {
   const authHeader = req.headers.authorization;
