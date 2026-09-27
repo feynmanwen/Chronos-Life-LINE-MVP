@@ -1,5 +1,7 @@
 import React, { useEffect } from 'react';
 import { HealthProvider, useHealth } from './context/HealthContext';
+import { AuthProvider, useAuth } from './context/AuthContext';
+import { LoginView } from './components/auth/LoginView';
 import { initAndroidNativeFeatures } from './utils/androidInit';
 import { DesktopHeader } from './components/layout/DesktopHeader';
 import { LineLiffContainer } from './components/layout/LineLiffContainer';
@@ -186,13 +188,36 @@ const MainContent: React.FC = () => {
   );
 };
 
-export function App() {
+const AuthenticatedApp: React.FC = () => {
+  const { isAuthenticated, isLoading } = useAuth();
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center space-y-4">
+        <img src="/icon-192.png" className="w-16 h-16 rounded-2xl animate-pulse" alt="Loading" />
+        <span className="text-xs text-slate-400 font-mono">SQLite 後台連線中...</span>
+      </div>
+    );
+  }
+
+  if (!isAuthenticated) {
+    return <LoginView />;
+  }
+
   return (
     <HealthProvider>
       <div className="min-h-screen bg-[#070b14] text-slate-100 selection:bg-emerald-500 selection:text-slate-950 font-sans">
         <MainContent />
       </div>
     </HealthProvider>
+  );
+};
+
+export function App() {
+  return (
+    <AuthProvider>
+      <AuthenticatedApp />
+    </AuthProvider>
   );
 }
 

@@ -145,6 +145,27 @@ export const HealthProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     localStorage.setItem('chronos_tasks_v13', JSON.stringify(tasks));
   }, [tasks]);
 
+  // 嘗試從後台 SQLite 資料庫載入成員與最新健檢紀錄
+  useEffect(() => {
+    fetch('/api/members')
+      .then(res => res.ok ? res.json() : null)
+      .then(data => {
+        if (data && Array.isArray(data) && data.length > 0) {
+          setMembers(data);
+        }
+      })
+      .catch(() => {});
+
+    fetch('/api/records')
+      .then(res => res.ok ? res.json() : null)
+      .then(data => {
+        if (data && Array.isArray(data) && data.length > 0) {
+          setRecords(data);
+        }
+      })
+      .catch(() => {});
+  }, []);
+
   const activeMember = members.find(m => m.id === activeMemberId) || members[0];
   const activeRecords = records.filter(r => r.memberId === activeMemberId);
   const activeEvents = events.filter(e => e.memberId === activeMemberId);
@@ -212,6 +233,13 @@ export const HealthProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       id: `rec-${Date.now()}`,
     };
     setRecords(prev => [newRec, ...prev]);
+
+    // 同步寫入後台 SQLite
+    fetch('/api/records', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(newRec),
+    }).catch(() => {});
   };
 
   const updateRecord = (id: string, updates: Partial<LabRecordItem>) => {

@@ -1,5 +1,6 @@
 import React from 'react';
 import { useHealth, ViewMode } from '../../context/HealthContext';
+import { useAuth } from '../../context/AuthContext';
 import { 
   Smartphone, 
   Tablet,
@@ -11,7 +12,9 @@ import {
   Watch, 
   ShieldAlert,
   Heart,
-  Sparkles
+  Sparkles,
+  LogOut,
+  Database
 } from 'lucide-react';
 
 export const DesktopHeader: React.FC = () => {
@@ -27,6 +30,7 @@ export const DesktopHeader: React.FC = () => {
     setIsWearableModalOpen,
     activeMember
   } = useHealth();
+  const { user, logout } = useAuth();
 
   return (
     <header className="sticky top-0 z-40 bg-slate-950/90 backdrop-blur-md border-b border-slate-800 px-4 sm:px-6 py-3">
@@ -135,6 +139,26 @@ export const DesktopHeader: React.FC = () => {
             >
               <Tablet className="w-4 h-4" />
               <span className="hidden xl:inline text-[11px]">平板/桌面</span>
+            </button>
+          </div>
+
+          {/* 目前登入者身分與登出按鈕 */}
+          <div className="ml-1 pl-2 border-l border-slate-800 flex items-center gap-2">
+            <div className="hidden lg:flex flex-col text-right leading-tight">
+              <span className="text-xs font-bold text-white flex items-center gap-1 justify-end">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                {user?.name || '陳偉 (本人)'}
+              </span>
+              <span className="text-[10px] text-cyan-400 font-mono">
+                {user?.role || '本人'} · SQLite
+              </span>
+            </div>
+            <button
+              onClick={() => logout()}
+              className="p-1.5 rounded-xl bg-slate-900 hover:bg-rose-950/70 hover:text-rose-300 text-slate-400 border border-slate-800 hover:border-rose-800/60 transition cursor-pointer"
+              title="登出帳號並返回登入介面"
+            >
+              <LogOut className="w-4 h-4" />
             </button>
           </div>
         </div>
