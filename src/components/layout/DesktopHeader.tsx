@@ -33,9 +33,11 @@ export const DesktopHeader: React.FC = () => {
       <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-3">
         {/* 左側：品牌識別 */}
         <div className="flex items-center gap-3 self-start md:self-auto">
-          <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-emerald-500 to-cyan-500 flex items-center justify-center text-slate-950 font-black text-lg shadow-lg shadow-emerald-500/20">
-            CL
-          </div>
+          <img
+            src="/icon-192.png"
+            alt="Chronos Life"
+            className="w-10 h-10 rounded-xl object-cover shadow-lg shadow-cyan-500/25 border border-cyan-500/30 shrink-0"
+          />
           <div>
             <div className="flex items-center gap-2">
               <h1 className="text-base sm:text-lg font-bold text-white tracking-tight">
