@@ -11,6 +11,7 @@ import {
   FileText, 
   Watch, 
   ShieldAlert,
+  ShieldCheck,
   Heart,
   Sparkles,
   LogOut,
@@ -28,9 +29,10 @@ export const DesktopHeader: React.FC = () => {
     setIsAuditWorkbenchOpen,
     setIsDoctorSummaryOpen,
     setIsWearableModalOpen,
+    setIsUserManagementOpen,
     activeMember
   } = useHealth();
-  const { user, logout } = useAuth();
+  const { user, isAdmin, logout } = useAuth();
 
   return (
     <header className="sticky top-0 z-40 bg-slate-950/90 backdrop-blur-md border-b border-slate-800 px-4 sm:px-6 py-3">
@@ -78,6 +80,18 @@ export const DesktopHeader: React.FC = () => {
 
         {/* 右側：動作按鈕與模態切換 */}
         <div className="flex items-center gap-2 self-end md:self-auto">
+          {/* 管理者專用：使用者資料管理中心入口 */}
+          {isAdmin && (
+            <button
+              onClick={() => setIsUserManagementOpen(true)}
+              className="px-2.5 sm:px-3 py-1.5 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white text-xs font-bold flex items-center gap-1.5 shadow-md shadow-purple-950 transition cursor-pointer"
+              title="管理目前所有使用者的資料"
+            >
+              <ShieldCheck className="w-3.5 h-3.5" />
+              <span>使用者管理</span>
+            </button>
+          )}
+
           {/* 四源匯入 */}
           <button
             onClick={() => setIsIngestionModalOpen(true)}

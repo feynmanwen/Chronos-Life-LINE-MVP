@@ -98,7 +98,7 @@ export interface CommunityResource {
 export interface FamilyMember {
   id: string;
   name: string;
-  role: '本人' | '父親' | '母親' | '配偶';
+  role: '本人' | '父親' | '母親' | '配偶' | '子女' | '照護者' | '醫師 / 管理員' | string;
   age: number;
   gender: 'M' | 'F';
   baseLifeExpectancyYears: number; // 預估基準餘命年數

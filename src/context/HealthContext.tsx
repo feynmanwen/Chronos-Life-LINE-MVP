@@ -14,6 +14,8 @@ import { GOLDEN_CASE_A, GOLDEN_CASE_B, GOLDEN_CASE_C } from '../data/goldenCases
 import { evaluateOrganSystems, classifyTrend } from '../utils/trendAnalyzer';
 import { checkRedFlagKeywords } from '../utils/redFlagDetector';
 import { exportHealthAssetsToCSV } from '../utils/csvExporter';
+import { useAuth } from './AuthContext';
+import { fetchMembers } from '../services/api';
 import confetti from 'canvas-confetti';
 
 export type AppTab = 'dashboard' | 'audit' | 'trends' | 'fittvp' | 'chat' | 'settings';
@@ -52,8 +54,11 @@ interface HealthContextType {
   setIsWearableModalOpen: (open: boolean) => void;
   isPrivacyModalOpen: boolean;
   setIsPrivacyModalOpen: (open: boolean) => void;
+  isUserManagementOpen: boolean;
+  setIsUserManagementOpen: (open: boolean) => void;
 
   // Actions
+  refreshMembers: () => Promise<void>;
   toggleTaskCheckin: (taskId: string) => void;
   addRecord: (record: Omit<LabRecordItem, 'id'>) => void;
   updateRecord: (id: string, updates: Partial<LabRecordItem>) => void;
@@ -86,6 +91,7 @@ const ALL_INITIAL_TASKS: FittVpTask[] = [
 ];
 
 export const HealthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const { user } = useAuth();
   const [members, setMembers] = useState<FamilyMember[]>(() => {
     const saved = localStorage.getItem('chronos_members_v13');
     return saved ? JSON.parse(saved) : INITIAL_MEMBERS;
@@ -127,6 +133,69 @@ export const HealthProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   const [isIngestionModalOpen, setIsIngestionModalOpen] = useState(false);
   const [isWearableModalOpen, setIsWearableModalOpen] = useState(false);
   const [isPrivacyModalOpen, setIsPrivacyModalOpen] = useState(false);
+  const [isUserManagementOpen, setIsUserManagementOpen] = useState(false);
+
+  // 重新整理並同步家庭成員清單 (SQLite 與 本地快取雙向連動)
+  const refreshMembers = async () => {
+    try {
+      const serverMembers = await fetchMembers();
+      if (serverMembers && Array.isArray(serverMembers) && serverMembers.length > 0) {
+        setMembers(prev => {
+          const map = new Map<string, FamilyMember>();
+          serverMembers.forEach(m => map.set(m.id, m));
+          prev.forEach(m => {
+            if (!map.has(m.id)) map.set(m.id, m);
+          });
+          return Array.from(map.values());
+        });
+      }
+    } catch {
+      // 保持目前 members
+    }
+  };
+
+  // 當使用者登入身分變更時，自動聚焦切換至該使用者的專屬健康檔案
+  useEffect(() => {
+    if (!user) return;
+
+    setMembers(currentMembers => {
+      // 檢查是否已有該用戶姓名之檔案
+      const matched = currentMembers.find(m => 
+        m.name.includes(user.name) || 
+        m.name.split(' ')[0] === user.name.split(' ')[0]
+      );
+
+      if (matched) {
+        setActiveMemberId(matched.id);
+        return currentMembers;
+      }
+
+      // 若為新註冊會員或管理者，立即建立專屬成員健康資產
+      const newMember: FamilyMember = {
+        id: 'member-' + (user.id || Date.now()),
+        name: `${user.name} (${user.role || '本人'})`,
+        role: user.role || '本人',
+        age: 35,
+        gender: 'M',
+        baseLifeExpectancyYears: 42.5,
+        dynamicBonusYears: 1.5,
+        nextClinicDate: new Date(Date.now() + 30 * 86400000).toISOString().split('T')[0],
+        nextClinicDepartment: '家醫科 / 預防醫學',
+        nextClinicDoctor: '陳建國 主治醫師',
+        companionNotes: '新註冊會員，建議預約初診建立基線健檢資料。',
+        sleepHoursDaily: 7.0,
+        dailySteps: 6000,
+        spo2: 98,
+        restingHeartRate: 72,
+        healthScore: 75,
+      };
+
+      setActiveMemberId(newMember.id);
+      return [newMember, ...currentMembers];
+    });
+
+    refreshMembers();
+  }, [user?.id, user?.name]);
 
   // Sync to localStorage
   useEffect(() => {
@@ -145,16 +214,9 @@ export const HealthProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     localStorage.setItem('chronos_tasks_v13', JSON.stringify(tasks));
   }, [tasks]);
 
-  // 嘗試從後台 SQLite 資料庫載入成員與最新健檢紀錄
+  // 初次載入 SQLite 數據
   useEffect(() => {
-    fetch('/api/members')
-      .then(res => res.ok ? res.json() : null)
-      .then(data => {
-        if (data && Array.isArray(data) && data.length > 0) {
-          setMembers(data);
-        }
-      })
-      .catch(() => {});
+    refreshMembers();
 
     fetch('/api/records')
       .then(res => res.ok ? res.json() : null)
@@ -322,6 +384,9 @@ export const HealthProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         setIsWearableModalOpen,
         isPrivacyModalOpen,
         setIsPrivacyModalOpen,
+        isUserManagementOpen,
+        setIsUserManagementOpen,
+        refreshMembers,
         toggleTaskCheckin,
         addRecord,
         updateRecord,

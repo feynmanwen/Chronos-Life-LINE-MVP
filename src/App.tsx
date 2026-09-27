@@ -26,6 +26,7 @@ import { IngestionModal } from './components/ingestion/IngestionModal';
 import { SourceTraceModal } from './components/trends/SourceTraceModal';
 import { DoctorSummaryModal } from './components/trends/DoctorSummaryModal';
 import { WearableSyncModal } from './components/settings/WearableSyncModal';
+import { UserManagementModal } from './components/admin/UserManagementModal';
 
 const MainContent: React.FC = () => {
   const { 
@@ -44,7 +45,9 @@ const MainContent: React.FC = () => {
     isWearableModalOpen,
     setIsWearableModalOpen,
     isPrivacyModalOpen,
-    setIsPrivacyModalOpen
+    setIsPrivacyModalOpen,
+    isUserManagementOpen,
+    setIsUserManagementOpen
   } = useHealth();
 
   // Android 原生硬體返回鍵與狀態列適配
@@ -79,6 +82,10 @@ const MainContent: React.FC = () => {
           setIsPrivacyModalOpen(false);
           return true;
         }
+        if (isUserManagementOpen) {
+          setIsUserManagementOpen(false);
+          return true;
+        }
         if (activeTab !== 'dashboard') {
           setActiveTab('dashboard');
           return true;
@@ -90,6 +97,8 @@ const MainContent: React.FC = () => {
     activeTab,
     setActiveTab,
     redFlagModal.isOpen,
+    isUserManagementOpen,
+    setIsUserManagementOpen,
     closeRedFlagModal,
     selectedRecordForTrace,
     setSelectedRecordForTrace,
@@ -184,6 +193,7 @@ const MainContent: React.FC = () => {
       <SourceTraceModal />
       <DoctorSummaryModal />
       <WearableSyncModal />
+      <UserManagementModal />
     </>
   );
 };

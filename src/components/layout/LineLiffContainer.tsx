@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useHealth } from '../../context/HealthContext';
+import { useAuth } from '../../context/AuthContext';
 import { RichMenu } from './RichMenu';
 import { isNativeApp } from '../../utils/device';
 import { Wifi, Battery, ChevronLeft, MoreVertical, X, ShieldCheck } from 'lucide-react';
@@ -9,7 +10,8 @@ interface LineLiffContainerProps {
 }
 
 export const LineLiffContainer: React.FC<LineLiffContainerProps> = ({ children }) => {
-  const { viewMode } = useHealth();
+  const { viewMode, setIsUserManagementOpen } = useHealth();
+  const { isAdmin } = useAuth();
   const [isNarrowScreen, setIsNarrowScreen] = useState(() => 
     typeof window !== 'undefined' ? window.innerWidth < 768 : false
   );
@@ -52,6 +54,22 @@ export const LineLiffContainer: React.FC<LineLiffContainerProps> = ({ children }
             <span>AI 即時守護中</span>
           </div>
         </div>
+
+        {/* 系統管理者專屬快速入口條 (行動端) */}
+        {isAdmin && (
+          <div className="bg-purple-950/90 border-b border-purple-800/80 px-4 py-2 flex items-center justify-between text-xs text-purple-200 select-none">
+            <div className="flex items-center gap-1.5 font-medium">
+              <ShieldCheck className="w-4 h-4 text-purple-400" />
+              <span>管理者身分就緒</span>
+            </div>
+            <button
+              onClick={() => setIsUserManagementOpen(true)}
+              className="px-2.5 py-1 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-bold text-[11px] shadow-md shadow-purple-950 transition cursor-pointer flex items-center gap-1"
+            >
+              <span>使用者管理中心</span>
+            </button>
+          </div>
+        )}
 
         {/* 內容滑動區域 */}
         <div className="flex-1 p-3 space-y-4">

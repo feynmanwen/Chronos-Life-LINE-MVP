@@ -17,18 +17,23 @@ import {
   HeartPulse
 } from 'lucide-react';
 
-type AuthMode = 'login' | 'register' | 'forgot';
+type AuthMode = 'login' | 'register' | 'forgot' | 'admin';
 
 export const LoginView: React.FC = () => {
   const { login, loginLine, switchPresetUser, register, resetPassword, isLoading } = useAuth();
   
-  // 模式切換：'login' | 'register' | 'forgot'
+  // 模式切換：'login' | 'register' | 'forgot' | 'admin'
   const [mode, setMode] = useState<AuthMode>('login');
 
   // 登入表單狀態
   const [username, setUsername] = useState('chen_wei');
   const [password, setPassword] = useState('123456');
   const [showPassword, setShowPassword] = useState(false);
+
+  // 管理者登入表單狀態
+  const [adminUsername, setAdminUsername] = useState('admin');
+  const [adminPassword, setAdminPassword] = useState('admin123');
+  const [showAdminPass, setShowAdminPass] = useState(false);
 
   // 註冊表單狀態
   const [regUsername, setRegUsername] = useState('');
@@ -71,7 +76,18 @@ export const LoginView: React.FC = () => {
     }
   };
 
-  // 2. 處理 LINE 快速登入
+  // 2. 處理管理者登入
+  const handleAdminSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    resetMessages();
+    try {
+      await login(adminUsername, adminPassword);
+    } catch (err: any) {
+      setErrorMsg(err.message || '管理者登入失敗，請檢查帳號與密碼');
+    }
+  };
+
+  // 3. 處理 LINE 快速登入
   const handleLineClick = async () => {
     resetMessages();
     try {
@@ -81,7 +97,7 @@ export const LoginView: React.FC = () => {
     }
   };
 
-  // 3. 處理新使用者註冊
+  // 4. 處理新使用者註冊
   const handleRegisterSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     resetMessages();
@@ -108,12 +124,13 @@ export const LoginView: React.FC = () => {
         age: Number(regAge) || 35,
         gender: regGender,
       });
+      setSuccessMsg(`註冊成功！歡迎加入 Chronos Life，${regName}！`);
     } catch (err: any) {
       setErrorMsg(err.message || '註冊失敗，該帳號可能已被使用');
     }
   };
 
-  // 4. 處理忘記密碼 / 重設密碼
+  // 5. 處理忘記密碼 / 重設密碼
   const handleForgotSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     resetMessages();
@@ -180,13 +197,42 @@ export const LoginView: React.FC = () => {
                 {mode === 'login' && 'AI 健檢趨勢管家'}
                 {mode === 'register' && '建立健康資產帳號'}
                 {mode === 'forgot' && '重設安全密碼'}
+                {mode === 'admin' && '系統管理者登入'}
               </h1>
               <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 font-mono">
-                v13.0
+                v14.0
               </span>
             </div>
             <p className="text-xs text-cyan-400 font-medium mt-0.5">Chronos Life · 個人健康資產管理系統</p>
           </div>
+        </div>
+
+        {/* 登入身分選項：一般會員 vs 系統管理者 */}
+        <div className="grid grid-cols-2 p-1 bg-slate-950/80 rounded-2xl border border-slate-800 shadow-inner">
+          <button
+            type="button"
+            onClick={() => switchMode('login')}
+            className={`py-2 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5 cursor-pointer ${
+              mode !== 'admin'
+                ? 'bg-gradient-to-r from-emerald-600 to-cyan-600 text-white shadow-md'
+                : 'text-slate-400 hover:text-white'
+            }`}
+          >
+            <User className="w-3.5 h-3.5" />
+            <span>一般會員登入</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => switchMode('admin')}
+            className={`py-2 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5 cursor-pointer ${
+              mode === 'admin'
+                ? 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-md'
+                : 'text-slate-400 hover:text-white'
+            }`}
+          >
+            <ShieldCheck className="w-3.5 h-3.5 text-purple-300" />
+            <span>🛡️ 管理者登入</span>
+          </button>
         </div>
 
         {/* 核心操作主面板 */}
@@ -601,6 +647,89 @@ export const LoginView: React.FC = () => {
                 className="w-full py-2 text-center text-xs text-slate-400 hover:text-white"
               >
                 想起密碼了？返回登入
+              </button>
+            </form>
+          )}
+
+          {/* ===================== MODE 4: 管理者登入 ===================== */}
+          {mode === 'admin' && (
+            <form onSubmit={handleAdminSubmit} className="space-y-4">
+              <div className="p-3.5 rounded-2xl bg-purple-950/40 border border-purple-800/60 text-xs text-purple-200 space-y-1">
+                <div className="flex items-center gap-1.5 font-bold text-purple-300">
+                  <ShieldCheck className="w-4 h-4 text-purple-400" />
+                  <span>醫療專屬特權模式</span>
+                </div>
+                <p className="text-[11px] text-purple-300/80 leading-relaxed">
+                  系統管理員與主治醫師專用。登入後可於頂部導航列開啟「使用者管理中心」，檢視、新增、編輯或維護所有會員之健康檔案與安全密碼。
+                </p>
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-xs font-medium text-slate-300 flex items-center gap-1.5">
+                  <User className="w-3.5 h-3.5 text-purple-400" />
+                  <span>管理者帳號 (Admin Username)</span>
+                </label>
+                <input
+                  type="text"
+                  value={adminUsername}
+                  onChange={(e) => setAdminUsername(e.target.value)}
+                  placeholder="請輸入管理者帳號"
+                  className="w-full bg-slate-950/70 border border-slate-700/80 rounded-xl px-3.5 py-2.5 text-sm text-white focus:outline-none focus:border-purple-500 transition font-mono"
+                  required
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-xs font-medium text-slate-300 flex items-center gap-1.5">
+                  <Lock className="w-3.5 h-3.5 text-purple-400" />
+                  <span>管理者密碼 (Password)</span>
+                </label>
+                <div className="relative">
+                  <input
+                    type={showAdminPass ? 'text' : 'password'}
+                    value={adminPassword}
+                    onChange={(e) => setAdminPassword(e.target.value)}
+                    placeholder="請輸入管理者密碼"
+                    className="w-full bg-slate-950/70 border border-slate-700/80 rounded-xl px-3.5 py-2.5 text-sm text-white pr-10 focus:outline-none focus:border-purple-500 transition font-mono"
+                    required
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowAdminPass(!showAdminPass)}
+                    className="absolute right-3 top-2.5 text-slate-400 hover:text-slate-200"
+                  >
+                    {showAdminPass ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
+                </div>
+              </div>
+
+              {/* 快速帶入預設管理員帳密 */}
+              <button
+                type="button"
+                onClick={() => {
+                  setAdminUsername('admin');
+                  setAdminPassword('admin123');
+                }}
+                className="w-full py-2 px-3 rounded-xl bg-purple-900/30 hover:bg-purple-900/50 border border-purple-700/50 text-[11px] text-purple-300 font-medium transition text-center cursor-pointer"
+              >
+                ⚡ 點擊快速載入預設憑證 (李明峰 醫師 · admin / admin123)
+              </button>
+
+              <button
+                type="submit"
+                disabled={isLoading}
+                className="w-full py-3 px-4 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 active:scale-[0.98] text-white font-bold text-sm shadow-md shadow-purple-950 transition duration-150 disabled:opacity-60 cursor-pointer flex items-center justify-center gap-2"
+              >
+                <ShieldCheck className="w-4 h-4 text-purple-200" />
+                <span>{isLoading ? '驗證權限中...' : '以管理者身分登入後台'}</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => switchMode('login')}
+                className="w-full py-2 text-center text-xs text-slate-400 hover:text-white"
+              >
+                ← 返回一般會員登入
               </button>
             </form>
           )}

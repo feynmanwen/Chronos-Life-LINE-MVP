@@ -139,9 +139,30 @@ app.post('/api/auth/register', (req, res) => {
       token, userId, createdAt, expiresAt
     );
 
+    const newMember = {
+      id: memberId,
+      userId,
+      name,
+      role,
+      age: Number(age) || 35,
+      gender,
+      baseLifeExpectancyYears: baseLife,
+      dynamicBonusYears: 1.5,
+      nextClinicDate: new Date(Date.now() + 30 * 86400000).toISOString().split('T')[0],
+      nextClinicDepartment: '家醫科 / 預防醫學',
+      nextClinicDoctor: '陳建國 主治醫師',
+      companionNotes: '新註冊會員，建議預約初診建立基線健檢資料。',
+      sleepHoursDaily: 7.0,
+      dailySteps: 6000,
+      spo2: 98,
+      restingHeartRate: 72,
+      healthScore: 75
+    };
+
     res.json({
       token,
       user: { id: userId, username, name, role, avatar_url: '/icon-192.png' },
+      member: newMember,
       message: `註冊成功！歡迎加入 Chronos Life，${name}！`
     });
   } catch (err: any) {
@@ -217,6 +238,183 @@ app.post('/api/auth/logout', (req, res) => {
 app.get('/api/users/presets', (req, res) => {
   const users = db.prepare('SELECT id, username, name, role, avatar_url FROM users').all();
   res.json(users);
+});
+
+// 6.1 管理者專用：取得所有使用者詳細資料與健康檔案關聯
+app.get('/api/admin/users', (req, res) => {
+  try {
+    const query = `
+      SELECT 
+        u.id, 
+        u.username, 
+        u.name, 
+        u.role, 
+        u.avatar_url, 
+        u.created_at,
+        m.id as member_id, 
+        m.age, 
+        m.gender, 
+        m.base_life_expectancy, 
+        m.health_score,
+        m.next_clinic_date, 
+        m.next_clinic_department, 
+        m.next_clinic_doctor, 
+        m.companion_notes
+      FROM users u
+      LEFT JOIN members m ON m.user_id = u.id
+      ORDER BY u.created_at DESC
+    `;
+    const users = db.prepare(query).all();
+    res.json(users);
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// 6.2 管理者專用：新增使用者與初始健康檔案
+app.post('/api/admin/users', (req, res) => {
+  const { username, password, name, role = '本人', age = 35, gender = 'M', notes = '', clinicDept = '家醫科 / 預防醫學' } = req.body;
+  if (!username || !password || !name) {
+    return res.status(400).json({ error: '請完整填寫帳號、密碼與姓名' });
+  }
+
+  const existing = db.prepare('SELECT id FROM users WHERE username = ?').get(username);
+  if (existing) {
+    return res.status(400).json({ error: `帳號 [${username}] 已存在` });
+  }
+
+  const userId = 'usr-' + Date.now();
+  const memberId = 'member-' + Date.now();
+  const createdAt = new Date().toISOString();
+  const baseLife = gender === 'F' ? 48.0 : 42.0;
+
+  try {
+    db.prepare(`
+      INSERT INTO users (id, username, password, name, role, avatar_url, created_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?)
+    `).run(userId, username, password, name, role, '/icon-192.png', createdAt);
+
+    db.prepare(`
+      INSERT INTO members (
+        id, user_id, name, role, age, gender, base_life_expectancy, dynamic_bonus,
+        next_clinic_date, next_clinic_department, next_clinic_doctor, companion_notes,
+        sleep_hours_daily, daily_steps, spo2, resting_heart_rate, health_score
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `).run(
+      memberId, userId, name, role, Number(age) || 35, gender, baseLife, 1.5,
+      new Date(Date.now() + 30 * 86400000).toISOString().split('T')[0],
+      clinicDept, '李明峰 主治醫師', notes || '管理者手動建立之會員健康資產。',
+      7.0, 6000, 98, 72, 75
+    );
+
+    res.json({
+      success: true,
+      user: { id: userId, username, name, role, avatar_url: '/icon-192.png', created_at: createdAt },
+      message: `成功新增使用者 [${name}]`
+    });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// 6.3 管理者專用：修改使用者資料
+app.put('/api/admin/users/:id', (req, res) => {
+  const { id } = req.params;
+  const { name, role, age, gender, health_score, companion_notes, next_clinic_department } = req.body;
+
+  try {
+    const user = db.prepare('SELECT * FROM users WHERE id = ?').get(id) as any;
+    if (!user) {
+      return res.status(404).json({ error: '找不到該使用者' });
+    }
+
+    if (name || role) {
+      db.prepare('UPDATE users SET name = COALESCE(?, name), role = COALESCE(?, role) WHERE id = ?')
+        .run(name || null, role || null, id);
+    }
+
+    // 同步更新 members 資料
+    const member = db.prepare('SELECT id FROM members WHERE user_id = ?').get(id) as any;
+    if (member) {
+      db.prepare(`
+        UPDATE members SET
+          name = COALESCE(?, name),
+          role = COALESCE(?, role),
+          age = COALESCE(?, age),
+          gender = COALESCE(?, gender),
+          health_score = COALESCE(?, health_score),
+          companion_notes = COALESCE(?, companion_notes),
+          next_clinic_department = COALESCE(?, next_clinic_department)
+        WHERE id = ?
+      `).run(
+        name || null,
+        role || null,
+        age !== undefined ? Number(age) : null,
+        gender || null,
+        health_score !== undefined ? Number(health_score) : null,
+        companion_notes !== undefined ? companion_notes : null,
+        next_clinic_department !== undefined ? next_clinic_department : null,
+        member.id
+      );
+    }
+
+    res.json({ success: true, message: `使用者 [${name || user.name}] 資料已成功更新！` });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// 6.4 管理者專用：重設特定使用者密碼
+app.post('/api/admin/users/:id/reset-password', (req, res) => {
+  const { id } = req.params;
+  const { newPassword } = req.body;
+
+  if (!newPassword || newPassword.length < 4) {
+    return res.status(400).json({ error: '新密碼長度至少需要 4 碼' });
+  }
+
+  try {
+    const user = db.prepare('SELECT username FROM users WHERE id = ?').get(id) as any;
+    if (!user) {
+      return res.status(404).json({ error: '找不到該使用者' });
+    }
+
+    db.prepare('UPDATE users SET password = ? WHERE id = ?').run(newPassword, id);
+    db.prepare('DELETE FROM sessions WHERE user_id = ?').run(id);
+
+    res.json({ success: true, message: `帳號 [${user.username}] 密碼已重設成功！` });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// 6.5 管理者專用：刪除使用者 (具備系統預設管理員保護)
+app.delete('/api/admin/users/:id', (req, res) => {
+  const { id } = req.params;
+
+  try {
+    const user = db.prepare('SELECT username FROM users WHERE id = ?').get(id) as any;
+    if (!user) {
+      return res.status(404).json({ error: '找不到該使用者' });
+    }
+
+    if (user.username === 'admin') {
+      return res.status(403).json({ error: '系統保護：無法刪除預設系統管理員帳號 (admin)' });
+    }
+
+    // 刪除使用者、關聯健康檔案、檢驗數據與 Session
+    const member = db.prepare('SELECT id FROM members WHERE user_id = ?').get(id) as any;
+    if (member) {
+      db.prepare('DELETE FROM lab_records WHERE member_id = ?').run(member.id);
+      db.prepare('DELETE FROM members WHERE id = ?').run(member.id);
+    }
+    db.prepare('DELETE FROM sessions WHERE user_id = ?').run(id);
+    db.prepare('DELETE FROM users WHERE id = ?').run(id);
+
+    res.json({ success: true, message: `已成功刪除使用者 [${user.username}] 及其健康數據檔案！` });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 // 7. 家庭成員資料 API (讀寫 SQLite)
