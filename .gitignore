@@ -26,3 +26,7 @@ dist-ssr
 # Recordings raw video binaries
 recordings/*.webm
 
+# Android APK binaries
+*.apk
+release-apk/
+
