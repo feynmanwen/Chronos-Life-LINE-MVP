@@ -2,9 +2,9 @@ import React from 'react';
 import { useHealth, AppTab } from '../../context/HealthContext';
 import { 
   Activity, 
-  FileSearch, 
+  Utensils, 
+  Watch, 
   TrendingUp, 
-  Dumbbell, 
   MessageSquare, 
   Settings,
   ShieldAlert
@@ -20,9 +20,9 @@ interface RichMenuItem {
 
 const MENU_ITEMS: RichMenuItem[] = [
   { id: 'dashboard', label: '策略儀表板', subLabel: '3D器官/生命樹', icon: Activity, color: 'text-emerald-400' },
-  { id: 'audit', label: '核對工作台', subLabel: '原圖比對/金律', icon: FileSearch, color: 'text-cyan-400' },
-  { id: 'trends', label: '指標趨勢', subLabel: '事件註記/溯源', icon: TrendingUp, color: 'text-indigo-400' },
-  { id: 'fittvp', label: 'FITT-VP任務', subLabel: '30天微習慣', icon: Dumbbell, color: 'text-amber-400' },
+  { id: 'diet', label: '智慧飲食', subLabel: '照片解析卡路里', icon: Utensils, color: 'text-orange-400' },
+  { id: 'exercise', label: '運動穿戴', subLabel: 'Zone 2/步數同步', icon: Watch, color: 'text-sky-400' },
+  { id: 'trends', label: '長期監控', subLabel: '熱量天平/生化逆轉', icon: TrendingUp, color: 'text-indigo-400' },
   { id: 'chat', label: 'LINE AI諮詢', subLabel: '急症紅旗防衛', icon: MessageSquare, color: 'text-green-400' },
   { id: 'settings', label: '社區與設定', subLabel: '資源/資安匯出', icon: Settings, color: 'text-purple-400' },
 ];

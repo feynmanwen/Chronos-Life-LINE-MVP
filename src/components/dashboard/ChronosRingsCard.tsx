@@ -16,12 +16,23 @@ import {
 import confetti from 'canvas-confetti';
 
 export const ChronosRingsCard: React.FC = () => {
-  const { activeMember } = useHealth();
+  const { 
+    activeMember, 
+    dietRingPercent, 
+    exerciseRingPercent, 
+    todayDietCalories, 
+    dietGoalCalories,
+    addDietRecord,
+    todayExerciseMinutes, 
+    exerciseGoalMinutes,
+    addExerciseRecord,
+    setActiveTab 
+  } = useHealth();
 
   // 三環進度狀態 (0 - 100)
   const [lifespanProgress, setLifespanProgress] = useState<number>(() => Math.min(96, activeMember.healthScore + 15));
-  const [exerciseProgress, setExerciseProgress] = useState<number>(85); // 28/30 min
-  const [dietProgress, setDietProgress] = useState<number>(82); // AI 營養合規率
+  const exerciseProgress = exerciseRingPercent;
+  const dietProgress = dietRingPercent;
 
   // 動態效果
   const [isPulsingGreen, setIsPulsingGreen] = useState(false);
@@ -63,10 +74,20 @@ export const ChronosRingsCard: React.FC = () => {
     setTimeout(() => setIsPulsingGreen(false), 2000);
   };
 
-  // 互動 2：模擬完成 Zone 2 超慢跑，藍環閉合
-  const handleCompleteExercise = () => {
-    setExerciseProgress(100);
+  // 互動 2：模擬完成 Zone 2 超慢跑，藍環動態推進
+  const handleCompleteExercise = async () => {
     try {
+      await addExerciseRecord({
+        exerciseType: 'Zone 2 超慢跑',
+        sourceDevice: 'Apple Watch Ultra 2',
+        durationMinutes: 30,
+        caloriesBurned: 185,
+        avgHeartRate: 124,
+        maxHeartRate: 135,
+        zone2Minutes: 28,
+        distanceKm: 3.2,
+        lifespanBonusHours: 2.5
+      });
       confetti({
         particleCount: 45,
         spread: 70,
@@ -76,13 +97,27 @@ export const ChronosRingsCard: React.FC = () => {
     } catch (_) {}
   };
 
-  // 互動 3：多模態 AI 飲食拍照辨識，橘環閉合
+  // 互動 3：多模態 AI 飲食拍照辨識，橘環動態推進
   const handleSimulateFoodPhoto = () => {
     setIsSimulatingFood(true);
     setFoodLogMessage('正在以多模態 Vision-LLM 辨識餐點成分...');
-    setTimeout(() => {
+    setTimeout(async () => {
       setIsSimulatingFood(false);
-      setDietProgress(100);
+      try {
+        await addDietRecord({
+          mealType: '午餐',
+          foodName: '地中海嫩煎鮭魚彩椒溫沙拉',
+          calories: 480,
+          carbs: 18,
+          protein: 38,
+          fat: 22,
+          fiber: 7,
+          sodium: 340,
+          glycemicIndex: '低GI',
+          healthImpactRating: 95,
+          aiAnalysisNotes: '富含 Omega-3 與花青素，保護 ALT 與 eGFR，極佳抗炎飲食。'
+        });
+      } catch (_) {}
       setFoodLogMessage('✓ 辨識完成：地中海嫩煎鮭魚彩椒溫沙拉（低鈉、極低嘌呤，保護 ALT 與 eGFR），今日膳食完全合規！');
       try {
         confetti({
@@ -310,24 +345,33 @@ export const ChronosRingsCard: React.FC = () => {
                     30 天心肺有氧與超慢跑（Zone 2）任務執行率。對接穿戴裝置 VO2 Max 與心率，每週 3 次、每次 30 分鐘黃金心率即可閉合。
                   </p>
                   <div className="mt-2 flex items-center gap-4 text-xs font-mono">
-                    <span className="text-slate-400">今日有氧：<strong className="text-white">{exerciseProgress === 100 ? '30' : '28'} / 30 分鐘</strong></span>
+                    <span className="text-slate-400">今日有氧：<strong className="text-white">{todayExerciseMinutes} / {exerciseGoalMinutes} 分鐘</strong></span>
                     <span className="text-sky-400">Zone 2 心率：<strong>115-130 bpm</strong></span>
                     <span className="text-slate-400">穿戴連線：<strong>已同步</strong></span>
                   </div>
                 </div>
               </div>
 
-              <button
-                onClick={handleCompleteExercise}
-                className={`shrink-0 px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1 transition ${
-                  exerciseProgress >= 100
-                    ? 'bg-sky-950 text-sky-300 border border-sky-500/50 cursor-default'
-                    : 'bg-sky-600 hover:bg-sky-500 text-white shadow-md shadow-sky-950 active:scale-95'
-                }`}
-              >
-                <CheckCircle2 className="w-3.5 h-3.5" />
-                <span>{exerciseProgress >= 100 ? '今日已閉合' : '完成超慢跑'}</span>
-              </button>
+              <div className="flex flex-col gap-1.5 shrink-0">
+                <button
+                  onClick={() => setActiveTab('exercise')}
+                  className="px-3 py-1.5 rounded-xl text-xs font-bold bg-sky-600 hover:bg-sky-500 text-white shadow-md shadow-sky-950 active:scale-95 transition cursor-pointer flex items-center gap-1 justify-center"
+                >
+                  <Watch className="w-3.5 h-3.5" />
+                  <span>進入運動模組</span>
+                </button>
+                <button
+                  onClick={handleCompleteExercise}
+                  className={`px-3 py-1 rounded-xl text-[11px] font-semibold flex items-center gap-1 transition justify-center ${
+                    exerciseProgress >= 100
+                      ? 'bg-sky-950 text-sky-300 border border-sky-500/50'
+                      : 'bg-slate-800 hover:bg-slate-700 text-slate-300'
+                  }`}
+                >
+                  <CheckCircle2 className="w-3 h-3" />
+                  <span>{exerciseProgress >= 100 ? '今日已閉合' : '快速達標打卡'}</span>
+                </button>
+              </div>
             </div>
           </div>
 
@@ -347,25 +391,34 @@ export const ChronosRingsCard: React.FC = () => {
                     多模態 AI 飲食拍照辨識之熱量與營養合規率。避開高鹽重鈉與高嘌呤（防止 ALT 發炎與 eGFR 腎過濾負擔），向內收縮閉合。
                   </p>
                   <div className="mt-2 flex items-center gap-4 text-xs font-mono">
-                    <span className="text-slate-400">總熱量：<strong className="text-white">1,650 / 1,800 kcal</strong></span>
+                    <span className="text-slate-400">總熱量：<strong className="text-white">{todayDietCalories} / {dietGoalCalories} kcal</strong></span>
                     <span className="text-orange-400">低鈉低嘌呤：<strong>達標</strong></span>
                     <span className="text-slate-400">合規率：<strong>{dietProgress}%</strong></span>
                   </div>
                 </div>
               </div>
 
-              <button
-                onClick={handleSimulateFoodPhoto}
-                disabled={isSimulatingFood}
-                className={`shrink-0 px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1 transition ${
-                  dietProgress >= 100
-                    ? 'bg-orange-950 text-orange-300 border border-orange-500/50 cursor-default'
-                    : 'bg-orange-600 hover:bg-orange-500 text-white shadow-md shadow-orange-950 active:scale-95'
-                }`}
-              >
-                <Camera className="w-3.5 h-3.5" />
-                <span>{isSimulatingFood ? 'AI 辨識中...' : dietProgress >= 100 ? '今日已閉合' : 'AI 拍照打卡'}</span>
-              </button>
+              <div className="flex flex-col gap-1.5 shrink-0">
+                <button
+                  onClick={() => setActiveTab('diet')}
+                  className="px-3 py-1.5 rounded-xl text-xs font-bold bg-orange-600 hover:bg-orange-500 text-white shadow-md shadow-orange-950 active:scale-95 transition cursor-pointer flex items-center gap-1 justify-center"
+                >
+                  <Camera className="w-3.5 h-3.5" />
+                  <span>進入飲食模組</span>
+                </button>
+                <button
+                  onClick={handleSimulateFoodPhoto}
+                  disabled={isSimulatingFood}
+                  className={`px-3 py-1 rounded-xl text-[11px] font-semibold flex items-center gap-1 transition justify-center ${
+                    dietProgress >= 100
+                      ? 'bg-orange-950 text-orange-300 border border-orange-500/50'
+                      : 'bg-slate-800 hover:bg-slate-700 text-slate-300'
+                  }`}
+                >
+                  <Sparkles className="w-3 h-3" />
+                  <span>{isSimulatingFood ? 'AI 辨識中...' : dietProgress >= 100 ? '今日已閉合' : 'AI 拍照試玩'}</span>
+                </button>
+              </div>
             </div>
 
             {/* AI 飲食拍照辨識即時提示 */}

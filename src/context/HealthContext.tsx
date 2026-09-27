@@ -7,7 +7,10 @@ import {
   HealthSystem, 
   OrganSystemInfo, 
   RedFlagInterception,
-  GoldenCaseId
+  GoldenCaseId,
+  DietRecord,
+  ExerciseRecord,
+  WearableDeviceData
 } from '../types/health';
 import { INITIAL_MEMBERS } from '../data/initialMembers';
 import { GOLDEN_CASE_A, GOLDEN_CASE_B, GOLDEN_CASE_C } from '../data/goldenCases';
@@ -15,10 +18,18 @@ import { evaluateOrganSystems, classifyTrend } from '../utils/trendAnalyzer';
 import { checkRedFlagKeywords } from '../utils/redFlagDetector';
 import { exportHealthAssetsToCSV } from '../utils/csvExporter';
 import { useAuth } from './AuthContext';
-import { fetchMembers } from '../services/api';
+import { 
+  fetchMembers,
+  fetchDietRecords,
+  createDietRecord,
+  removeDietRecord,
+  fetchExerciseRecords,
+  createExerciseRecord,
+  syncWearableTelemetry
+} from '../services/api';
 import confetti from 'canvas-confetti';
 
-export type AppTab = 'dashboard' | 'audit' | 'trends' | 'fittvp' | 'chat' | 'settings';
+export type AppTab = 'dashboard' | 'diet' | 'exercise' | 'trends' | 'audit' | 'fittvp' | 'chat' | 'settings';
 export type ViewMode = 'mobile' | 'desktop';
 
 interface HealthContextType {
@@ -67,6 +78,23 @@ interface HealthContextType {
   addLifeEvent: (event: Omit<LifeEvent, 'id'>) => void;
   loadGoldenCase: (caseId: GoldenCaseId) => void;
   exportCsv: () => void;
+
+  // 飲食模組
+  dietRecords: DietRecord[];
+  addDietRecord: (record: Partial<DietRecord>) => Promise<DietRecord>;
+  deleteDietRecord: (id: string) => Promise<void>;
+  todayDietCalories: number;
+  dietGoalCalories: number;
+  dietRingPercent: number;
+
+  // 運動模組與穿戴裝置
+  exerciseRecords: ExerciseRecord[];
+  addExerciseRecord: (record: Partial<ExerciseRecord>) => Promise<ExerciseRecord>;
+  todayExerciseMinutes: number;
+  exerciseGoalMinutes: number;
+  exerciseRingPercent: number;
+  wearableDevice: WearableDeviceData | null;
+  syncWearable: (device?: string) => Promise<WearableDeviceData>;
 }
 
 const HealthContext = createContext<HealthContextType | undefined>(undefined);
@@ -134,6 +162,93 @@ export const HealthProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   const [isWearableModalOpen, setIsWearableModalOpen] = useState(false);
   const [isPrivacyModalOpen, setIsPrivacyModalOpen] = useState(false);
   const [isUserManagementOpen, setIsUserManagementOpen] = useState(false);
+
+  // 飲食與運動數據狀態
+  const [dietRecords, setDietRecords] = useState<DietRecord[]>([]);
+  const [exerciseRecords, setExerciseRecords] = useState<ExerciseRecord[]>([]);
+  const [wearableDevice, setWearableDevice] = useState<WearableDeviceData | null>(null);
+
+  // 載入飲食與運動數據
+  useEffect(() => {
+    let isMounted = true;
+    async function loadDietAndExercise() {
+      try {
+        const [dRecs, eRecs] = await Promise.all([
+          fetchDietRecords(activeMemberId),
+          fetchExerciseRecords(activeMemberId)
+        ]);
+        if (isMounted) {
+          setDietRecords(dRecs);
+          setExerciseRecords(eRecs);
+        }
+      } catch {}
+    }
+    loadDietAndExercise();
+    return () => { isMounted = false; };
+  }, [activeMemberId]);
+
+  // 新增飲食紀錄
+  const addDietRecord = async (record: Partial<DietRecord>): Promise<DietRecord> => {
+    const created = await createDietRecord({
+      ...record,
+      memberId: activeMemberId,
+      userId: user?.id
+    });
+    setDietRecords(prev => [created, ...prev]);
+    return created;
+  };
+
+  // 刪除飲食紀錄
+  const deleteDietRecord = async (id: string): Promise<void> => {
+    await removeDietRecord(id);
+    setDietRecords(prev => prev.filter(r => r.id !== id));
+  };
+
+  // 新增運動紀錄
+  const addExerciseRecord = async (record: Partial<ExerciseRecord>): Promise<ExerciseRecord> => {
+    const created = await createExerciseRecord({
+      ...record,
+      memberId: activeMemberId,
+      userId: user?.id
+    });
+    setExerciseRecords(prev => [created, ...prev]);
+    return created;
+  };
+
+  // 穿戴裝置即時同步
+  const syncWearable = async (device: string = 'Apple Watch Ultra 2'): Promise<WearableDeviceData> => {
+    const telemetry = await syncWearableTelemetry(device, activeMemberId);
+    setWearableDevice(telemetry);
+    if (telemetry.zone2MinutesToday > 0) {
+      await addExerciseRecord({
+        exerciseType: 'Zone 2 超慢跑',
+        sourceDevice: device as any,
+        durationMinutes: telemetry.zone2MinutesToday,
+        caloriesBurned: telemetry.activeCaloriesKcal,
+        avgHeartRate: 122,
+        zone2Minutes: telemetry.zone2MinutesToday,
+        steps: telemetry.dailySteps,
+        lifespanBonusHours: +(telemetry.zone2MinutesToday / 12).toFixed(1)
+      });
+    }
+    return telemetry;
+  };
+
+  // 今日卡路里與三環動態進度計算
+  const todayStr = new Date().toISOString().slice(0, 10);
+  const todayDietMeals = dietRecords.filter(r => r.loggedAt.slice(0, 10) === todayStr);
+  const todayDietCalories = todayDietMeals.reduce((sum, r) => sum + r.calories, 0);
+  const dietGoalCalories = 1800; // 目標大卡
+  const dietRingPercent = todayDietMeals.length > 0 
+    ? Math.min(100, Math.round((todayDietMeals.reduce((s, m) => s + m.healthImpactRating, 0) / todayDietMeals.length)))
+    : 82;
+
+  const todayExerciseList = exerciseRecords.filter(r => r.loggedAt.slice(0, 10) === todayStr);
+  const todayExerciseMinutes = todayExerciseList.reduce((sum, r) => sum + r.durationMinutes, 0);
+  const exerciseGoalMinutes = 30; // 每日 30 分鐘微習慣
+  const exerciseRingPercent = todayExerciseList.length > 0
+    ? Math.min(100, Math.round((todayExerciseMinutes / exerciseGoalMinutes) * 100))
+    : 85;
 
   // 重新整理並同步家庭成員清單 (SQLite 與 本地快取雙向連動)
   const refreshMembers = async () => {
@@ -395,6 +510,19 @@ export const HealthProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         addLifeEvent,
         loadGoldenCase,
         exportCsv,
+        dietRecords,
+        addDietRecord,
+        deleteDietRecord,
+        todayDietCalories,
+        dietGoalCalories,
+        dietRingPercent,
+        exerciseRecords,
+        addExerciseRecord,
+        todayExerciseMinutes,
+        exerciseGoalMinutes,
+        exerciseRingPercent,
+        wearableDevice,
+        syncWearable,
       }}
     >
       {children}

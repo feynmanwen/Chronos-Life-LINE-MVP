@@ -14,6 +14,9 @@ import { TrendHighlightCards } from './components/dashboard/TrendHighlightCards'
 import { FamilyCompanionCard } from './components/dashboard/FamilyCompanionCard';
 import { TrendChartModal } from './components/trends/TrendChartModal';
 import { EventAnnotationBar } from './components/trends/EventAnnotationBar';
+import { LongTermMonitoringView } from './components/trends/LongTermMonitoringView';
+import { DietModuleView } from './components/diet/DietModuleView';
+import { ExerciseModuleView } from './components/exercise/ExerciseModuleView';
 import { FittVpPlanCard } from './components/intervention/FittVpPlanCard';
 import { CommunityResourceHub } from './components/intervention/CommunityResourceHub';
 import { LineChatView } from './components/chat/LineChatView';
@@ -151,8 +154,21 @@ const MainContent: React.FC = () => {
           </div>
         )}
 
+        {activeTab === 'diet' && (
+          <div className="space-y-5">
+            <DietModuleView />
+          </div>
+        )}
+
+        {activeTab === 'exercise' && (
+          <div className="space-y-5">
+            <ExerciseModuleView />
+          </div>
+        )}
+
         {activeTab === 'trends' && (
           <div className="space-y-5">
+            <LongTermMonitoringView />
             <TrendChartModal />
             <EventAnnotationBar />
           </div>

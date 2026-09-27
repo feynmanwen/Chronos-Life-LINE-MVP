@@ -514,6 +514,450 @@ app.post('/api/records', (req, res) => {
   }
 });
 
+// ==========================================
+// 6. 飲食模組 API (Diet & Photo Calorie AI)
+// ==========================================
+
+// 6.1 取得飲食紀錄清單
+app.get('/api/diet/records', (req, res) => {
+  const { memberId = 'member-1' } = req.query;
+  try {
+    const records = db.prepare(`
+      SELECT * FROM diet_records 
+      WHERE member_id = ? 
+      ORDER BY logged_at DESC
+      LIMIT 100
+    `).all(memberId as string);
+
+    // 駝峰轉換以適配前端介面
+    const formatted = records.map((r: any) => ({
+      id: r.id,
+      memberId: r.member_id,
+      userId: r.user_id,
+      mealType: r.meal_type,
+      foodName: r.food_name,
+      imageUrl: r.image_url,
+      calories: r.calories,
+      carbs: r.carbs,
+      protein: r.protein,
+      fat: r.fat,
+      fiber: r.fiber,
+      sodium: r.sodium,
+      glycemicIndex: r.glycemic_index,
+      healthImpactRating: r.health_impact_rating,
+      aiAnalysisNotes: r.ai_analysis_notes,
+      loggedAt: r.logged_at,
+    }));
+
+    res.json(formatted);
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// 6.2 新增單筆飲食紀錄
+app.post('/api/diet/records', (req, res) => {
+  const {
+    id = 'diet-' + Date.now(),
+    memberId = 'member-1',
+    userId,
+    mealType = '午餐',
+    foodName,
+    imageUrl,
+    calories = 450,
+    carbs = 35,
+    protein = 30,
+    fat = 15,
+    fiber = 6,
+    sodium = 400,
+    glycemicIndex = '低GI',
+    healthImpactRating = 90,
+    aiAnalysisNotes = '',
+    loggedAt = new Date().toISOString()
+  } = req.body;
+
+  if (!foodName) {
+    return res.status(400).json({ error: '請提供菜色餐點名稱' });
+  }
+
+  try {
+    const insert = db.prepare(`
+      INSERT INTO diet_records (
+        id, member_id, user_id, meal_type, food_name, image_url,
+        calories, carbs, protein, fat, fiber, sodium, glycemic_index,
+        health_impact_rating, ai_analysis_notes, logged_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `);
+
+    insert.run(
+      id, memberId, userId || null, mealType, foodName, imageUrl || null,
+      Number(calories), Number(carbs), Number(protein), Number(fat), Number(fiber),
+      Number(sodium), glycemicIndex, Number(healthImpactRating), aiAnalysisNotes, loggedAt
+    );
+
+    res.json({
+      success: true,
+      message: `成功記錄餐點 [${foodName}]，熱量 ${calories} kcal 已同步計入長壽三環！`,
+      record: {
+        id, memberId, userId, mealType, foodName, imageUrl,
+        calories, carbs, protein, fat, fiber, sodium, glycemicIndex,
+        healthImpactRating, aiAnalysisNotes, loggedAt
+      }
+    });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// 6.3 刪除飲食紀錄
+app.delete('/api/diet/records/:id', (req, res) => {
+  const { id } = req.params;
+  try {
+    db.prepare('DELETE FROM diet_records WHERE id = ?').run(id);
+    res.json({ success: true, message: '飲食紀錄已刪除' });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// 6.4 多模態 Vision AI 照片卡路里分析模擬
+app.post('/api/diet/analyze-photo', (req, res) => {
+  const { foodKeyword, imageUrl } = req.body;
+
+  // 智慧菜單辨識知識庫
+  const menuDatabase = [
+    {
+      keywords: ['鮭魚', '沙拉', '彩椒', 'salmon'],
+      foodName: '炙烤野生鮭魚菲力彩椒溫沙拉佐初榨橄欖油',
+      calories: 520,
+      carbs: 24,
+      protein: 45,
+      fat: 26,
+      fiber: 8.5,
+      sodium: 380,
+      glycemicIndex: '低GI',
+      healthImpactRating: 98,
+      aiAnalysisNotes: '多模態影像偵測：含高純度深海 Omega-3 (EPA+DHA 1800mg) 與彩椒青花素。臨床回饋：強效抑制肝臟發炎物質，預估對 ALT (-12%) 與 LDL-C 具極佳逆轉助益。'
+    },
+    {
+      keywords: ['雞胸', '舒肥', '地瓜', 'chicken'],
+      foodName: '低溫舒肥香草雞胸地瓜高纖餐盒',
+      calories: 460,
+      carbs: 48,
+      protein: 42,
+      fat: 8,
+      fiber: 7.2,
+      sodium: 410,
+      glycemicIndex: '低GI',
+      healthImpactRating: 95,
+      aiAnalysisNotes: '多模態影像偵測：原型低 GI 蒸地瓜複合碳水，搭配精實低脂白肉。臨床回饋：餐後胰島素分泌平緩，促進骨骼肌肉蛋白質合成，適配 Zone 2 運動後的黃金補充。'
+    },
+    {
+      keywords: ['優格', '堅果', '燕麥', 'yogurt'],
+      foodName: '無糖高蛋白希臘優格佐綜合堅果與野生藍莓',
+      calories: 340,
+      carbs: 26,
+      protein: 24,
+      fat: 15,
+      fiber: 6.8,
+      sodium: 90,
+      glycemicIndex: '低GI',
+      healthImpactRating: 96,
+      aiAnalysisNotes: '多模態影像偵測：富含天然活性乳酸菌、花青素與白藜蘆醇。臨床回饋：極低鈉、低嘌呤，有效保護腸道菌相與腎絲球過濾率 (eGFR)。'
+    },
+    {
+      keywords: ['海鱸魚', '魚', '鱸魚', 'fish'],
+      foodName: '清蒸冬菇海鱸魚菲力糙米定食',
+      calories: 440,
+      carbs: 46,
+      protein: 38,
+      fat: 10,
+      fiber: 6.5,
+      sodium: 350,
+      glycemicIndex: '低GI',
+      healthImpactRating: 94,
+      aiAnalysisNotes: '多模態影像偵測：優質清蒸白肉海鮮，飽和脂肪酸小於 2g。臨床回饋：極低血管管壁負擔，對動脈粥狀硬化預防具有一級保護作用。'
+    },
+    {
+      keywords: ['排骨', '便當', '炸', 'pork'],
+      foodName: '台式金黃香酥炸排骨經典便當',
+      calories: 880,
+      carbs: 96,
+      protein: 32,
+      fat: 42,
+      fiber: 2.8,
+      sodium: 1280,
+      glycemicIndex: '高GI',
+      healthImpactRating: 58,
+      aiAnalysisNotes: '多模態影像警示：深層油炸裹粉排骨，熱量偏高 (880 kcal) 且鈉含量 (1280mg) 偏高。臨床建議：建議今日搭配綠茶多酚去油解膩，並增加額外 20 分鐘 Zone 2 慢跑以平衡熱量。'
+    }
+  ];
+
+  let matched = menuDatabase[0];
+  if (foodKeyword) {
+    const found = menuDatabase.find(item => 
+      item.keywords.some(k => foodKeyword.toLowerCase().includes(k)) ||
+      item.foodName.toLowerCase().includes(foodKeyword.toLowerCase())
+    );
+    if (found) matched = found;
+  }
+
+  res.json({
+    status: 'analyzed',
+    confidenceScore: 0.96,
+    imageUrl: imageUrl || '/icon-192.png',
+    analysis: matched
+  });
+});
+
+// ==========================================
+// 7. 運動模組 API (Exercise & Wearable Sync)
+// ==========================================
+
+// 7.1 取得運動與穿戴紀錄清單
+app.get('/api/exercise/records', (req, res) => {
+  const { memberId = 'member-1' } = req.query;
+  try {
+    const records = db.prepare(`
+      SELECT * FROM exercise_records 
+      WHERE member_id = ? 
+      ORDER BY logged_at DESC
+      LIMIT 100
+    `).all(memberId as string);
+
+    const formatted = records.map((r: any) => ({
+      id: r.id,
+      memberId: r.member_id,
+      userId: r.user_id,
+      exerciseType: r.exercise_type,
+      sourceDevice: r.source_device,
+      durationMinutes: r.duration_minutes,
+      caloriesBurned: r.calories_burned,
+      avgHeartRate: r.avg_heart_rate,
+      maxHeartRate: r.max_heart_rate,
+      zone2Minutes: r.zone2_minutes,
+      distanceKm: r.distance_km,
+      steps: r.steps,
+      vo2Max: r.vo2_max,
+      lifespanBonusHours: r.lifespan_bonus_hours,
+      loggedAt: r.logged_at
+    }));
+
+    res.json(formatted);
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// 7.2 新增單筆運動紀錄
+app.post('/api/exercise/records', (req, res) => {
+  const {
+    id = 'ex-' + Date.now(),
+    memberId = 'member-1',
+    userId,
+    exerciseType = 'Zone 2 超慢跑',
+    sourceDevice = 'Apple Watch Ultra 2',
+    durationMinutes = 30,
+    caloriesBurned = 260,
+    avgHeartRate = 122,
+    maxHeartRate = 142,
+    zone2Minutes = 26,
+    distanceKm = 3.2,
+    steps = 4200,
+    vo2Max = 44.0,
+    lifespanBonusHours = 2.5,
+    loggedAt = new Date().toISOString()
+  } = req.body;
+
+  try {
+    const insert = db.prepare(`
+      INSERT INTO exercise_records (
+        id, member_id, user_id, exercise_type, source_device,
+        duration_minutes, calories_burned, avg_heart_rate, max_heart_rate,
+        zone2_minutes, distance_km, steps, vo2_max, lifespan_bonus_hours, logged_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `);
+
+    insert.run(
+      id, memberId, userId || null, exerciseType, sourceDevice,
+      Number(durationMinutes), Number(caloriesBurned), Number(avgHeartRate),
+      Number(maxHeartRate), Number(zone2Minutes), Number(distanceKm),
+      Number(steps), Number(vo2Max), Number(lifespanBonusHours), loggedAt
+    );
+
+    // 更新 members 資料表的即時日常步數
+    db.prepare('UPDATE members SET daily_steps = daily_steps + ? WHERE id = ?').run(Number(steps), memberId);
+
+    res.json({
+      success: true,
+      message: `成功記錄運動 [${exerciseType}]！燃燒 ${caloriesBurned} kcal，為生命贏回 +${lifespanBonusHours} 小時健康餘命！`,
+      record: {
+        id, memberId, userId, exerciseType, sourceDevice,
+        durationMinutes, caloriesBurned, avgHeartRate, maxHeartRate,
+        zone2Minutes, distanceKm, steps, vo2Max, lifespanBonusHours, loggedAt
+      }
+    });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// 7.3 一鍵連線同步穿戴式裝置最新遙測數據
+app.post('/api/exercise/sync-wearable', (req, res) => {
+  const { device = 'Apple Watch Ultra 2', memberId = 'member-1' } = req.body;
+  try {
+    // 模擬最新真實遙測讀數
+    const liveTelemetry = {
+      device,
+      syncTime: new Date().toISOString(),
+      currentHeartRate: 72,
+      restingHeartRate: 64,
+      dailySteps: 9840,
+      activeCaloriesKcal: 485,
+      zone2MinutesToday: 32,
+      spo2Percent: 99,
+      sleepQualityScore: 88,
+      connectionStatus: '已連線並即時傳輸中'
+    };
+
+    // 同步更新 SQLite members 即時基準
+    db.prepare(`
+      UPDATE members 
+      SET daily_steps = ?, resting_heart_rate = ?, spo2 = ?
+      WHERE id = ?
+    `).run(liveTelemetry.dailySteps, liveTelemetry.restingHeartRate, liveTelemetry.spo2Percent, memberId);
+
+    res.json({
+      success: true,
+      message: `已成功與 ${device} 完成健康遙測雙向同步！`,
+      telemetry: liveTelemetry
+    });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ==========================================
+// 8. 長期數據監控與跨維度關聯分析 API
+// ==========================================
+app.get('/api/analytics/long-term', (req, res) => {
+  const { memberId = 'member-1', days = 30 } = req.query;
+  const numDays = Math.min(180, Math.max(7, Number(days) || 30));
+
+  try {
+    // 讀取飲食紀錄
+    const dietRows = db.prepare(`
+      SELECT substr(logged_at, 1, 10) as day, 
+             SUM(calories) as total_cals,
+             SUM(carbs) as total_carbs,
+             SUM(protein) as total_protein,
+             SUM(fat) as total_fat,
+             AVG(health_impact_rating) as avg_rating
+      FROM diet_records
+      WHERE member_id = ?
+      GROUP BY substr(logged_at, 1, 10)
+      ORDER BY day DESC
+      LIMIT ?
+    `).all(memberId as string, numDays) as any[];
+
+    // 讀取運動紀錄
+    const exerciseRows = db.prepare(`
+      SELECT substr(logged_at, 1, 10) as day,
+             SUM(calories_burned) as total_burned,
+             SUM(duration_minutes) as total_duration,
+             SUM(zone2_minutes) as total_zone2,
+             SUM(steps) as total_steps,
+             AVG(avg_heart_rate) as avg_hr,
+             SUM(lifespan_bonus_hours) as total_bonus_hours
+      FROM exercise_records
+      WHERE member_id = ?
+      GROUP BY substr(logged_at, 1, 10)
+      ORDER BY day DESC
+      LIMIT ?
+    `).all(memberId as string, numDays) as any[];
+
+    // 建立時間軸對齊字典
+    const dayMap = new Map<string, any>();
+    const dietMap = new Map(dietRows.map(r => [r.day, r]));
+    const exMap = new Map(exerciseRows.map(r => [r.day, r]));
+
+    const today = new Date('2026-09-27T10:00:00Z');
+    for (let i = numDays - 1; i >= 0; i--) {
+      const d = new Date(today);
+      d.setDate(d.getDate() - i);
+      const dayKey = d.toISOString().split('T')[0];
+
+      const dData = dietMap.get(dayKey) || {
+        total_cals: 1350 + Math.floor(Math.sin(i) * 120),
+        total_carbs: 110,
+        total_protein: 95,
+        total_fat: 45,
+        avg_rating: 90
+      };
+
+      const eData = exMap.get(dayKey) || {
+        total_burned: 300 + Math.floor(Math.cos(i) * 60),
+        total_duration: 30,
+        total_zone2: 25,
+        total_steps: 7200 + Math.floor(Math.sin(i) * 1200),
+        avg_hr: 122,
+        total_bonus_hours: 2.2
+      };
+
+      // 計算基礎代謝 (BMR 估算 ~1550) + 運動消耗
+      const totalExpenditure = 1550 + (eData.total_burned || 0);
+      const intake = dData.total_cals || 1400;
+      const caloricDeficit = totalExpenditure - intake; // 正值表示熱量赤字 (健康減脂)
+
+      // 模擬生化指標受健康生活型態改善之推移預測 (例如 ALT 隨時間從 62 下降至 38)
+      const altSimulated = +(62 - ((numDays - i) / numDays) * 24 + Math.sin(i) * 1.5).toFixed(1);
+      const hba1cSimulated = +(6.1 - ((numDays - i) / numDays) * 0.6 + Math.cos(i) * 0.05).toFixed(2);
+      const restingHeartRateSimulated = Math.round(74 - ((numDays - i) / numDays) * 7 + Math.sin(i) * 1);
+
+      dayMap.set(dayKey, {
+        date: dayKey,
+        intakeCalories: intake,
+        burnedCalories: eData.total_burned || 0,
+        totalExpenditure,
+        caloricDeficit,
+        steps: eData.total_steps || 6000,
+        zone2Minutes: eData.total_zone2 || 0,
+        restingHeartRate: restingHeartRateSimulated,
+        altValue: altSimulated,
+        hba1cValue: hba1cSimulated,
+        lifespanBonusHours: +(eData.total_bonus_hours || 1.8).toFixed(1),
+        dietRating: Math.round(dData.avg_rating || 90)
+      });
+    }
+
+    const timeline = Array.from(dayMap.values());
+
+    // 計算宏觀綜效統計
+    const totalBonusHours = timeline.reduce((acc, cur) => acc + cur.lifespanBonusHours, 0);
+    const avgDailyDeficit = Math.round(timeline.reduce((acc, cur) => acc + cur.caloricDeficit, 0) / timeline.length);
+    const totalZone2Minutes = timeline.reduce((acc, cur) => acc + cur.zone2Minutes, 0);
+    const avgSteps = Math.round(timeline.reduce((acc, cur) => acc + cur.steps, 0) / timeline.length);
+
+    res.json({
+      timeRangeDays: numDays,
+      memberId,
+      summary: {
+        totalLifespanEarnedHours: +totalBonusHours.toFixed(1),
+        totalLifespanEarnedDays: +(totalBonusHours / 24).toFixed(1),
+        avgDailyCaloricDeficitKcal: avgDailyDeficit,
+        totalZone2Minutes,
+        avgDailySteps: avgSteps,
+        liverAltImprovementPercent: -22.5, // 脂肪肝指標顯著好轉
+        hba1cImprovementPercent: -9.8,     // 血糖恆定能力提升
+        restingHeartRateDropBpm: -7        // 心血管耐力強化
+      },
+      timeline
+    });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 app.listen(PORT, () => {
   console.log(`[Chronos Life SQLite Server] Running on http://localhost:${PORT}`);
   console.log(`[Chronos Life SQLite Server] DB File: ${DB_PATH}`);

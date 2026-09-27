@@ -15,7 +15,11 @@ import {
   Heart,
   Sparkles,
   LogOut,
-  Database
+  Database,
+  Utensils,
+  Dumbbell,
+  TrendingUp,
+  LayoutDashboard
 } from 'lucide-react';
 
 export const DesktopHeader: React.FC = () => {
@@ -30,7 +34,9 @@ export const DesktopHeader: React.FC = () => {
     setIsDoctorSummaryOpen,
     setIsWearableModalOpen,
     setIsUserManagementOpen,
-    activeMember
+    activeMember,
+    activeTab,
+    setActiveTab
   } = useHealth();
   const { user, isAdmin, logout } = useAuth();
 
@@ -76,6 +82,54 @@ export const DesktopHeader: React.FC = () => {
               </button>
             );
           })}
+        </div>
+
+        {/* 快速模組導航 (總覽 / 飲食 / 運動 / 長期監控) */}
+        <div className="flex items-center gap-1 bg-slate-900/90 p-1 rounded-xl border border-slate-800 text-xs shrink-0">
+          <button
+            onClick={() => setActiveTab('dashboard')}
+            className={`px-2.5 py-1 rounded-lg font-semibold transition flex items-center gap-1 cursor-pointer ${
+              activeTab === 'dashboard'
+                ? 'bg-slate-800 text-emerald-400 shadow-sm'
+                : 'text-slate-400 hover:text-white'
+            }`}
+          >
+            <LayoutDashboard className="w-3.5 h-3.5" />
+            <span className="hidden xl:inline">儀表板</span>
+          </button>
+          <button
+            onClick={() => setActiveTab('diet')}
+            className={`px-2.5 py-1 rounded-lg font-semibold transition flex items-center gap-1 cursor-pointer ${
+              activeTab === 'diet'
+                ? 'bg-orange-950/80 border border-orange-500/50 text-orange-300 shadow-sm'
+                : 'text-slate-400 hover:text-orange-300'
+            }`}
+          >
+            <Utensils className="w-3.5 h-3.5 text-orange-400" />
+            <span>智慧飲食</span>
+          </button>
+          <button
+            onClick={() => setActiveTab('exercise')}
+            className={`px-2.5 py-1 rounded-lg font-semibold transition flex items-center gap-1 cursor-pointer ${
+              activeTab === 'exercise'
+                ? 'bg-sky-950/80 border border-sky-500/50 text-sky-300 shadow-sm'
+                : 'text-slate-400 hover:text-sky-300'
+            }`}
+          >
+            <Dumbbell className="w-3.5 h-3.5 text-sky-400" />
+            <span>運動穿戴</span>
+          </button>
+          <button
+            onClick={() => setActiveTab('trends')}
+            className={`px-2.5 py-1 rounded-lg font-semibold transition flex items-center gap-1 cursor-pointer ${
+              activeTab === 'trends'
+                ? 'bg-indigo-950/80 border border-indigo-500/50 text-indigo-300 shadow-sm'
+                : 'text-slate-400 hover:text-indigo-300'
+            }`}
+          >
+            <TrendingUp className="w-3.5 h-3.5 text-indigo-400" />
+            <span>長期監控</span>
+          </button>
         </div>
 
         {/* 右側：動作按鈕與模態切換 */}

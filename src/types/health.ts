@@ -134,3 +134,106 @@ export interface RedFlagInterception {
   emergencyPhone: string;
   nearbyHospitals: { name: string; distance: string; phone: string; mapsUrl: string }[];
 }
+
+// 飲食紀錄模型
+export interface DietRecord {
+  id: string;
+  memberId: string;
+  userId?: string;
+  mealType: '早餐' | '午餐' | '晚餐' | '點心加餐';
+  foodName: string;
+  imageUrl?: string;
+  calories: number; // 大卡 kcal
+  carbs: number; // 碳水化合物 g
+  protein: number; // 蛋白質 g
+  fat: number; // 脂肪 g
+  fiber: number; // 膳食纖維 g
+  sodium: number; // 鈉 mg
+  glycemicIndex: '低GI' | '中GI' | '高GI';
+  healthImpactRating: number; // 0 - 100
+  aiAnalysisNotes: string; // Vision AI 營養點評
+  loggedAt: string; // ISO 日期字串
+}
+
+// AI 照片辨識結果模型
+export interface FoodAnalysisResult {
+  foodName: string;
+  calories: number;
+  carbs: number;
+  protein: number;
+  fat: number;
+  fiber: number;
+  sodium: number;
+  glycemicIndex: '低GI' | '中GI' | '高GI';
+  healthImpactRating: number;
+  aiAnalysisNotes: string;
+}
+
+// 運動與穿戴紀錄模型
+export interface ExerciseRecord {
+  id: string;
+  memberId: string;
+  userId?: string;
+  exerciseType: 'Zone 2 超慢跑' | '心肺有氧快走' | '高強度間歇 HIIT' | '力量抗阻訓練' | '核心與伸展';
+  sourceDevice: 'Apple Watch Ultra 2' | 'Garmin Forerunner' | 'Pixel Watch 3' | 'Samsung Galaxy Watch 7' | '手動記錄';
+  durationMinutes: number;
+  caloriesBurned: number; // 大卡 kcal
+  avgHeartRate: number; // bpm
+  maxHeartRate: number; // bpm
+  zone2Minutes: number; // 分鐘
+  distanceKm?: number;
+  steps?: number;
+  vo2Max?: number;
+  lifespanBonusHours: number; // 為生命贏回之預期餘命小時數，例如 2.5
+  loggedAt: string;
+}
+
+// 穿戴裝置即時遙測模型
+export interface WearableDeviceData {
+  device: string;
+  syncTime: string;
+  currentHeartRate: number;
+  restingHeartRate: number;
+  dailySteps: number;
+  activeCaloriesKcal: number;
+  zone2MinutesToday: number;
+  spo2Percent: number;
+  sleepQualityScore: number;
+  connectionStatus: string;
+}
+
+// 長期數據監控時間點模型
+export interface LongTermDayPoint {
+  date: string;
+  intakeCalories: number;
+  burnedCalories: number;
+  totalExpenditure: number;
+  caloricDeficit: number; // 正值為赤字 (有利於代謝改善)，負值為盈餘
+  steps: number;
+  zone2Minutes: number;
+  restingHeartRate: number;
+  altValue: number;
+  hba1cValue: number;
+  lifespanBonusHours: number;
+  dietRating: number;
+}
+
+// 長期數據宏觀統計模型
+export interface LongTermSummary {
+  totalLifespanEarnedHours: number;
+  totalLifespanEarnedDays: number;
+  avgDailyCaloricDeficitKcal: number;
+  totalZone2Minutes: number;
+  avgDailySteps: number;
+  liverAltImprovementPercent: number;
+  hba1cImprovementPercent: number;
+  restingHeartRateDropBpm: number;
+}
+
+export interface LongTermAnalyticsResponse {
+  timeRangeDays: number;
+  memberId: string;
+  summary: LongTermSummary;
+  timeline: LongTermDayPoint[];
+}
+

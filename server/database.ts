@@ -76,9 +76,47 @@ export function initDatabase() {
       created_at TEXT NOT NULL,
       expires_at TEXT NOT NULL
     );
+
+    CREATE TABLE IF NOT EXISTS diet_records (
+      id TEXT PRIMARY KEY,
+      member_id TEXT NOT NULL,
+      user_id TEXT,
+      meal_type TEXT NOT NULL,
+      food_name TEXT NOT NULL,
+      image_url TEXT,
+      calories INTEGER NOT NULL,
+      carbs REAL,
+      protein REAL,
+      fat REAL,
+      fiber REAL,
+      sodium REAL,
+      glycemic_index TEXT,
+      health_impact_rating INTEGER,
+      ai_analysis_notes TEXT,
+      logged_at TEXT NOT NULL
+    );
+
+    CREATE TABLE IF NOT EXISTS exercise_records (
+      id TEXT PRIMARY KEY,
+      member_id TEXT NOT NULL,
+      user_id TEXT,
+      exercise_type TEXT NOT NULL,
+      source_device TEXT NOT NULL,
+      duration_minutes INTEGER NOT NULL,
+      calories_burned INTEGER NOT NULL,
+      avg_heart_rate INTEGER,
+      max_heart_rate INTEGER,
+      zone2_minutes INTEGER,
+      distance_km REAL,
+      steps INTEGER,
+      vo2_max REAL,
+      lifespan_bonus_hours REAL,
+      logged_at TEXT NOT NULL
+    );
   `);
 
   seedInitialData();
+  seedDietAndExerciseData();
 }
 
 // 2. 預載初始資料 (Pre-seeding Users, Family Members, Lab Records)
@@ -420,5 +458,143 @@ function seedInitialData() {
       );
     }
     console.log('[SQLite] Lab records initialized.');
+  }
+}
+
+// 3. 預載 30 天飲食與穿戴運動歷史紀錄 (供長期趨勢分析與三環閉環展示)
+function seedDietAndExerciseData() {
+  const dietCount = (db.prepare('SELECT COUNT(*) as cnt FROM diet_records').get() as { cnt: number }).cnt;
+  const exerciseCount = (db.prepare('SELECT COUNT(*) as cnt FROM exercise_records').get() as { cnt: number }).cnt;
+
+  if (dietCount === 0) {
+    const insertDiet = db.prepare(`
+      INSERT INTO diet_records (
+        id, member_id, user_id, meal_type, food_name, image_url,
+        calories, carbs, protein, fat, fiber, sodium, glycemic_index,
+        health_impact_rating, ai_analysis_notes, logged_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `);
+
+    const sampleMeals = [
+      {
+        mealType: '早餐',
+        foodName: '無糖高蛋白希臘優格佐綜合堅果莓果',
+        calories: 340,
+        carbs: 22,
+        protein: 26,
+        fat: 14,
+        fiber: 6.5,
+        sodium: 85,
+        glycemicIndex: '低GI',
+        rating: 94,
+        notes: '高蛋白低升糖指數，含豐富花青素與益生菌，有助於維持早晨胰島素平穩。'
+      },
+      {
+        mealType: '午餐',
+        foodName: '炙烤野生鮭魚菲力彩椒溫沙拉佐橄欖油',
+        calories: 520,
+        carbs: 28,
+        protein: 42,
+        fat: 24,
+        fiber: 8.2,
+        sodium: 360,
+        glycemicIndex: '低GI',
+        rating: 96,
+        notes: '富含高純度 Omega-3 (EPA/DHA) 與多酚抗氧化物，顯著減緩肝臟發炎指數 (ALT)。'
+      },
+      {
+        mealType: '晚餐',
+        foodName: '低溫舒肥香草雞胸藜麥糙米飯餐盒',
+        calories: 460,
+        carbs: 45,
+        protein: 38,
+        fat: 9,
+        fiber: 7.0,
+        sodium: 420,
+        glycemicIndex: '低GI',
+        rating: 92,
+        notes: '全穀複合碳水搭配低脂優質蛋白質，減輕夜間消化系統與腎絲球過濾負擔。'
+      }
+    ];
+
+    const today = new Date('2026-09-27T10:00:00Z');
+    for (let dayOffset = 29; dayOffset >= 0; dayOffset--) {
+      const d = new Date(today);
+      d.setDate(d.getDate() - dayOffset);
+      const dateStr = d.toISOString().split('T')[0];
+
+      sampleMeals.forEach((meal, idx) => {
+        // 微調波動讓折線圖更真實自然
+        const calVariance = Math.floor(Math.sin(dayOffset + idx) * 35);
+        const actualCals = Math.max(280, meal.calories + calVariance);
+        const loggedTime = new Date(`${dateStr}T0${7 + idx * 5}:30:00Z`).toISOString();
+
+        insertDiet.run(
+          `diet-seed-${dayOffset}-${idx}`,
+          'member-1',
+          'usr-1',
+          meal.mealType,
+          meal.foodName,
+          '/icon-192.png',
+          actualCals,
+          meal.carbs + Math.floor(Math.sin(dayOffset) * 4),
+          meal.protein + Math.floor(Math.cos(dayOffset) * 3),
+          meal.fat + Math.floor(Math.sin(dayOffset * 2) * 2),
+          meal.fiber,
+          meal.sodium,
+          meal.glycemicIndex,
+          Math.min(99, Math.max(80, meal.rating + (dayOffset < 10 ? 3 : -2))),
+          meal.notes,
+          loggedTime
+        );
+      });
+    }
+    console.log('[SQLite] Pre-seeded 30 days of diet records.');
+  }
+
+  if (exerciseCount === 0) {
+    const insertExercise = db.prepare(`
+      INSERT INTO exercise_records (
+        id, member_id, user_id, exercise_type, source_device,
+        duration_minutes, calories_burned, avg_heart_rate, max_heart_rate,
+        zone2_minutes, distance_km, steps, vo2_max, lifespan_bonus_hours, logged_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `);
+
+    const today = new Date('2026-09-27T10:00:00Z');
+    for (let dayOffset = 29; dayOffset >= 0; dayOffset--) {
+      const d = new Date(today);
+      d.setDate(d.getDate() - dayOffset);
+      const dateStr = d.toISOString().split('T')[0];
+
+      // 每週規律運動 5 天
+      if (dayOffset % 7 !== 2 && dayOffset % 7 !== 5) {
+        const isZone2 = dayOffset % 2 === 0;
+        const duration = isZone2 ? 35 : 30;
+        const calories = isZone2 ? 310 + Math.floor(Math.cos(dayOffset) * 25) : 240 + Math.floor(Math.sin(dayOffset) * 20);
+        const steps = isZone2 ? 4600 + Math.floor(Math.sin(dayOffset) * 400) : 3400 + Math.floor(Math.cos(dayOffset) * 300);
+        const avgHr = isZone2 ? 124 : 118;
+        const zone2Min = isZone2 ? 31 : 24;
+
+        insertExercise.run(
+          `ex-seed-${dayOffset}`,
+          'member-1',
+          'usr-1',
+          isZone2 ? 'Zone 2 超慢跑' : '心肺有氧快走',
+          'Apple Watch Ultra 2',
+          duration,
+          calories,
+          avgHr,
+          avgHr + 18,
+          zone2Min,
+          isZone2 ? 3.8 : 2.5,
+          steps,
+          42.5 + (30 - dayOffset) * 0.05, // VO2 Max 隨時間成長
+          +(2.0 + (zone2Min / 30) * 0.8).toFixed(1), // 贏回壽命時數
+          new Date(`${dateStr}T18:30:00Z`).toISOString()
+        );
+      }
+    }
+    console.log('[SQLite] Pre-seeded 30 days of exercise records.');
   }
 }
